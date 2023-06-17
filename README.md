@@ -1,22 +1,22 @@
 # kdbx
 Kdbx File Format Reader and Writer (KeePass2 file format)
 
-Dependencies:
+## Dependencies:
 - Bouncy Castle Crypto Provider
     (current version "1.70", see: "https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on" for download)
 
-Supported encryption algorithms:
+## Supported encryption algorithms:
 - AES 128
 - AES 256
 - ChaCha20
 
-Supported KDF (Key Derivation Function) algorithms:
+## Supported KDF (Key Derivation Function) algorithms:
 - AES_KDBX3
 - AES_KDBX4
 - ARGON2D
 - ARGON2ID
 
-Supported credential types:
+## Supported credential types:
 - Password only
 - Password with keyfile (simple keyfile like txt or Kdbx keyfile version 1.00 and 2.0)
 - Keyfile only (simple keyfile like txt or Kdbx keyfile version 1.00 and 2.0)
@@ -24,7 +24,8 @@ Supported credential types:
 By now only KdbxReader is working
 KdbxWriter is still missing, but will come in near time.
 
-KdbxReader example with simple password:
+## Code examples
+### KdbxReader example with simple password:
 ```java
 try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("MyKeePassDatabase.kdbx"))) {
   final KdbxDatabase database = kdbxReader.readKdbxDatabase("MyPassword".toCharArray());
@@ -44,7 +45,7 @@ try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResou
 }
 ```
 
-KdbxReader example with password and keyfile:
+### KdbxReader example with password and keyfile:
 ```java
 try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("MyKeePassDatabase.kdbx"))) {
   final byte[] keyFileData = IoUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("MyKeePassKeyFile.keyx"));
