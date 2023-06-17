@@ -8,6 +8,7 @@ Kdbx File Format Reader and Writer (KeePass2 file format)
 ## Supported encryption algorithms:
 - AES 128
 - AES 256
+- Salsa20
 - ChaCha20
 
 ## Supported KDF (Key Derivation Function) algorithms:
