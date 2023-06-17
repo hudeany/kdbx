@@ -1,6 +1,21 @@
 # kdbx
 Kdbx File Format Reader and Writer (KeePass2 file format)
 
+Dependencies:
+- Bouncy Castle Crypto Provider
+    (current version "1.70", see: "https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on" for download)
+
+Supported encryption algorithms:
+- AES 128
+- AES 256
+- ChaCha20
+
+Supported KDF (Key Derivation Function) algorithms:
+- AES_KDBX3
+- AES_KDBX4
+- ARGON2D
+- ARGON2ID
+
 By now only KdbxReader is working
 KdbxWriter is still missing, but will come in near time.
 
