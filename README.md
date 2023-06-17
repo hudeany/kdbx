@@ -5,6 +5,7 @@ By now only KdbxReader is working
 KdbxWriter is still missing, but will come in near time.
 
 KdbxReader example:
+```java
 try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("MyKeePassDatabase.kdbx"))) {
   final KdbxDatabase database = kdbxReader.readKdbxDatabase("MyPassword".toCharArray());
   System.out.println(database.getMeta().getDatabaseName()));
@@ -21,3 +22,4 @@ try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResou
   e.printStackTrace();
   Assert.fail(e.getMessage());
 }
+```
