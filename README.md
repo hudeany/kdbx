@@ -29,7 +29,7 @@ KdbxWriter is still missing, but will come in near time.
 ## Code examples
 ### KdbxReader example with simple password:
 ```java
-try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("MyKeePassDatabase.kdbx"))) {
+try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDatabase.kdbx"))) {
   final KdbxDatabase database = kdbxReader.readKdbxDatabase("MyPassword".toCharArray());
   System.out.println("Databasename: " + database.getMeta().getDatabaseName()));
   System.out.println("Number of groups on first level: " + database.getGroups().size());
@@ -47,10 +47,10 @@ try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResou
 
 ### KdbxReader example with password and keyfile:
 ```java
-try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("MyKeePassDatabase.kdbx"))) {
-  final byte[] keyFileData = IoUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("MyKeePassKeyFile.keyx"));
-	final KdbxCredentials credentials = new KdbxCredentials("MyPassword".toCharArray(), keyFileData);
-	final KdbxDatabase database = kdbxReader.readKdbxDatabase(credentials);
+try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDatabase.kdbx"))) {
+  final byte[] keyFileData = Utilities.toByteArray(new FileInputStream("MyKeePassKeyFile.keyx"));
+  final KdbxCredentials credentials = new KdbxCredentials("MyPassword".toCharArray(), keyFileData);
+  final KdbxDatabase database = kdbxReader.readKdbxDatabase(credentials);
   System.out.println("Overall number of stored entries: " + database.getAllEntries().size());
 } catch (final Exception e) {
   e.printStackTrace();
