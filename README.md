@@ -2,6 +2,7 @@
 Kdbx File Format Reader and Writer (KeePass2 file format)
 
 ## Dependencies:
+- JAVA 8
 - Bouncy Castle Crypto Provider
     (current version "1.70", see: "https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on" for download)
 
