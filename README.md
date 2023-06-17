@@ -16,6 +16,11 @@ Supported KDF (Key Derivation Function) algorithms:
 - ARGON2D
 - ARGON2ID
 
+Supported credential type
+- Password only
+- Password with keyfile (simple keyfile like txt or Kdbx keyfile version 1.00 and 2.0)
+- Keyfile only (simple keyfile like txt or Kdbx keyfile version 1.00 and 2.0)
+
 By now only KdbxReader is working
 KdbxWriter is still missing, but will come in near time.
 
