@@ -1,5 +1,5 @@
 # kdbx
-Kdbx File Format Reader and Writer (KeePass2 file format)
+Java Kdbx File Format Reader and Writer (KeePass2 file format)
 
 ## Dependencies:
 - JAVA 8
