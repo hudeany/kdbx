@@ -1,7 +1,9 @@
 package de.soderer.utilities.kdbx.data;
 
 import java.time.ZonedDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class KdbxMeta {
 	private String generator;
@@ -13,255 +15,459 @@ public class KdbxMeta {
 	private ZonedDateTime databaseDescriptionChanged;
 	private String defaultUserName;
 	private ZonedDateTime defaultUserNameChanged;
-	private String maintenanceHistoryDays;
+	private int maintenanceHistoryDays;
 	private String color;
 	private ZonedDateTime masterKeyChanged;
-	private String masterKeyChangeRec;
-	private String masterKeyChangeForce;
+	private int masterKeyChangeRec;
+	private int masterKeyChangeForce;
+	private boolean masterKeyChangeForceOnce;
 	private String recycleBinEnabled;
-	private String recycleBinUUID;
+	private KdbxUUID recycleBinUUID;
 	private ZonedDateTime recycleBinChanged;
-	private String entryTemplatesGroup;
+	private KdbxUUID entryTemplatesGroup;
 	private ZonedDateTime entryTemplatesGroupChanged;
-	private String historyMaxItems;
-	private String historyMaxSize;
+	private int historyMaxItems;
+	private int historyMaxSize;
 	private String lastSelectedGroup;
-	private String lastTopVisibleGroup;
-	private String binaries;
+	private KdbxUUID lastTopVisibleGroup;
+	private List<KdbxBinary> binaries;
 	private KdbxMemoryProtection memoryProtection;
 	private List<KdbxCustomDataItem> customData;
+	public Map<KdbxUUID, byte[]> customIcons = new LinkedHashMap<>();
 
-	public String getGenerator() {
-		return generator;
-	}
-
+	/**
+	 * Name of the program, which created the kdbx file
+	 */
 	public KdbxMeta setGenerator(final String generator) {
 		this.generator = generator;
 		return this;
 	}
 
-	public String getHeaderHash() {
-		return headerHash;
+	/**
+	 * Name of the program, which created the kdbx file
+	 */
+	public String getGenerator() {
+		return generator;
 	}
 
+	/**
+	 * SHA-256 hash of the KDBX header data as BLOB.
+	 * Only utilized in KDBX 3.1 or lower.
+	 * MAY also be present in KDBX 4.0 or higher.
+	 */
 	public KdbxMeta setHeaderHash(final String headerHash) {
 		this.headerHash = headerHash;
 		return this;
 	}
 
-	public ZonedDateTime getSettingsChanged() {
-		return settingsChanged;
+	/**
+	 * SHA-256 hash of the KDBX header data as BLOB.
+	 * Only utilized in KDBX 3.1 or lower.
+	 * MAY also be present in KDBX 4.0 or higher.
+	 */
+	public String getHeaderHash() {
+		return headerHash;
 	}
 
+	/**
+	 *  Datetime of change of settings or meta  data change
+	 *  May only be present in KDBX 4.0 or higher.
+	 */
 	public KdbxMeta setSettingsChanged(final ZonedDateTime settingsChanged) {
 		this.settingsChanged = settingsChanged;
 		return this;
 	}
 
-	public String getDatabaseName() {
-		return databaseName;
+	/**
+	 *  Datetime of change of settings or meta  data change
+	 *  May only be present in KDBX 4.0 or higher.
+	 */
+	public ZonedDateTime getSettingsChanged() {
+		return settingsChanged;
 	}
 
+	/**
+	 * Name of the database
+	 */
 	public KdbxMeta setDatabaseName(final String databaseName) {
 		this.databaseName = databaseName;
 		return this;
 	}
 
-	public ZonedDateTime getDatabaseNameChanged() {
-		return databaseNameChanged;
+	/**
+	 * Name of the database
+	 */
+	public String getDatabaseName() {
+		return databaseName;
 	}
 
+	/**
+	 *  Datetime of database name change
+	 */
 	public KdbxMeta setDatabaseNameChanged(final ZonedDateTime databaseNameChanged) {
 		this.databaseNameChanged = databaseNameChanged;
 		return this;
 	}
 
-	public String getDatabaseDescription() {
-		return databaseDescription;
+	/**
+	 *  Datetime of database name change
+	 */
+	public ZonedDateTime getDatabaseNameChanged() {
+		return databaseNameChanged;
 	}
 
+	/**
+	 *  Database description
+	 */
 	public KdbxMeta setDatabaseDescription(final String databaseDescription) {
 		this.databaseDescription = databaseDescription;
 		return this;
 	}
 
-	public ZonedDateTime getDatabaseDescriptionChanged() {
-		return databaseDescriptionChanged;
+	/**
+	 *  Database description
+	 */
+	public String getDatabaseDescription() {
+		return databaseDescription;
 	}
 
+	/**
+	 *  Datetime of database description change
+	 */
 	public KdbxMeta setDatabaseDescriptionChanged(final ZonedDateTime databaseDescriptionChanged) {
 		this.databaseDescriptionChanged = databaseDescriptionChanged;
 		return this;
 	}
 
-	public String getDefaultUserName() {
-		return defaultUserName;
+	/**
+	 *  Datetime of database description change
+	 */
+	public ZonedDateTime getDatabaseDescriptionChanged() {
+		return databaseDescriptionChanged;
 	}
 
+	/**
+	 * Default username for new entries
+	 */
 	public KdbxMeta setDefaultUserName(final String defaultUserName) {
 		this.defaultUserName = defaultUserName;
 		return this;
 	}
 
-	public ZonedDateTime getDefaultUserNameChanged() {
-		return defaultUserNameChanged;
+	/**
+	 * Default username for new entries
+	 */
+	public String getDefaultUserName() {
+		return defaultUserName;
 	}
 
+	/**
+	 *  Datetime of default username change
+	 */
 	public KdbxMeta setDefaultUserNameChanged(final ZonedDateTime defaultUserNameChanged) {
 		this.defaultUserNameChanged = defaultUserNameChanged;
 		return this;
 	}
 
-	public String getMaintenanceHistoryDays() {
-		return maintenanceHistoryDays;
+	/**
+	 *  Datetime of default username change
+	 */
+	public ZonedDateTime getDefaultUserNameChanged() {
+		return defaultUserNameChanged;
 	}
 
-	public KdbxMeta setMaintenanceHistoryDays(final String maintenanceHistoryDays) {
+	/**
+	 * Maximum age in days of history entries
+	 */
+	public KdbxMeta setMaintenanceHistoryDays(final int maintenanceHistoryDays) {
 		this.maintenanceHistoryDays = maintenanceHistoryDays;
 		return this;
 	}
 
-	public String getColor() {
-		return color;
+	/**
+	 * Maximum age in days of history entries
+	 */
+	public int getMaintenanceHistoryDays() {
+		return maintenanceHistoryDays;
 	}
 
+	/**
+	 * Color for GUI display of database
+	 * Six-digit hexadecimal RGB color code with a # prefix character
+	 */
 	public KdbxMeta setColor(final String color) {
 		this.color = color;
 		return this;
 	}
 
-	public ZonedDateTime getMasterKeyChanged() {
-		return masterKeyChanged;
+	/**
+	 * Color for GUI display of database
+	 * Six-digit hexadecimal RGB color code with a # prefix character
+	 */
+	public String getColor() {
+		return color;
 	}
 
+	/**
+	 * Datetime of last master key change
+	 */
 	public KdbxMeta setMasterKeyChanged(final ZonedDateTime masterKeyChanged) {
 		this.masterKeyChanged = masterKeyChanged;
 		return this;
 	}
 
-	public String getMasterKeyChangeRec() {
-		return masterKeyChangeRec;
+	/**
+	 * Datetime of last master key change
+	 */
+	public ZonedDateTime getMasterKeyChanged() {
+		return masterKeyChanged;
 	}
 
-	public KdbxMeta setMasterKeyChangeRec(final String masterKeyChangeRec) {
+	/**
+	 * Master key expiration in days for change recommendation (-1 => Unlimited)
+	 */
+	public KdbxMeta setMasterKeyChangeRec(final int masterKeyChangeRec) {
 		this.masterKeyChangeRec = masterKeyChangeRec;
 		return this;
 	}
 
-	public String getMasterKeyChangeForce() {
-		return masterKeyChangeForce;
+	/**
+	 * Master key expiration in days for change recommendation (-1 => Unlimited)
+	 */
+	public int getMasterKeyChangeRec() {
+		return masterKeyChangeRec;
 	}
 
-	public KdbxMeta setMasterKeyChangeForce(final String masterKeyChangeForce) {
+	/**
+	 * Master key expiration in days for forced change (-1 => Unlimited)
+	 */
+	public KdbxMeta setMasterKeyChangeForce(final int masterKeyChangeForce) {
 		this.masterKeyChangeForce = masterKeyChangeForce;
 		return this;
 	}
 
-	public String getRecycleBinEnabled() {
-		return recycleBinEnabled;
+	/**
+	 * Master key expiration in days for forced change (-1 => Unlimited)
+	 */
+	public int getMasterKeyChangeForce() {
+		return masterKeyChangeForce;
 	}
 
+	/**
+	 * Enforce master key change on next database open
+	 */
+	public KdbxMeta setMasterKeyChangeForceOnce(final boolean masterKeyChangeForceOnce) {
+		this.masterKeyChangeForceOnce = masterKeyChangeForceOnce;
+		return this;
+	}
+
+	/**
+	 * Enforce master key change on next database open
+	 */
+	public boolean isMasterKeyChangeForceOnce() {
+		return masterKeyChangeForceOnce;
+	}
+
+	/**
+	 * Activation state of the recycling bin
+	 */
 	public KdbxMeta setRecycleBinEnabled(final String recycleBinEnabled) {
 		this.recycleBinEnabled = recycleBinEnabled;
 		return this;
 	}
 
-	public String getRecycleBinUUID() {
-		return recycleBinUUID;
+	/**
+	 * Activation state of the recycling bin
+	 */
+	public String getRecycleBinEnabled() {
+		return recycleBinEnabled;
 	}
 
-	public KdbxMeta setRecycleBinUUID(final String recycleBinUUID) {
+	/**
+	 * UUID of the recycling bin group
+	 */
+	public KdbxMeta setRecycleBinUUID(final KdbxUUID recycleBinUUID) {
 		this.recycleBinUUID = recycleBinUUID;
 		return this;
 	}
 
-	public ZonedDateTime getRecycleBinChanged() {
-		return recycleBinChanged;
+	/**
+	 * UUID of the recycling bin group
+	 */
+	public KdbxUUID getRecycleBinUUID() {
+		return recycleBinUUID;
 	}
 
+	/**
+	 * Datetime of recycling bin group change
+	 */
 	public KdbxMeta setRecycleBinChanged(final ZonedDateTime recycleBinChanged) {
 		this.recycleBinChanged = recycleBinChanged;
 		return this;
 	}
 
-	public String getEntryTemplatesGroup() {
-		return entryTemplatesGroup;
+	/**
+	 * Datetime of recycling bin group change
+	 */
+	public ZonedDateTime getRecycleBinChanged() {
+		return recycleBinChanged;
 	}
 
-	public KdbxMeta setEntryTemplatesGroup(final String entryTemplatesGroup) {
+	/**
+	 * UUID of the group containing entry templates
+	 */
+	public KdbxMeta setEntryTemplatesGroup(final KdbxUUID entryTemplatesGroup) {
 		this.entryTemplatesGroup = entryTemplatesGroup;
 		return this;
 	}
 
-	public ZonedDateTime getEntryTemplatesGroupChanged() {
-		return entryTemplatesGroupChanged;
+	/**
+	 * UUID of the group containing entry templates
+	 */
+	public KdbxUUID getEntryTemplatesGroup() {
+		return entryTemplatesGroup;
 	}
 
+	/**
+	 * Datetime of entry templates group change
+	 */
 	public KdbxMeta setEntryTemplatesGroupChanged(final ZonedDateTime entryTemplatesGroupChanged) {
 		this.entryTemplatesGroupChanged = entryTemplatesGroupChanged;
 		return this;
 	}
 
-	public String getHistoryMaxItems() {
-		return historyMaxItems;
+	/**
+	 * Datetime of entry templates group change
+	 */
+	public ZonedDateTime getEntryTemplatesGroupChanged() {
+		return entryTemplatesGroupChanged;
 	}
 
-	public KdbxMeta setHistoryMaxItems(final String historyMaxItems) {
+	/**
+	 * Maximum number of items in the history of entries
+	 */
+	public KdbxMeta setHistoryMaxItems(final int historyMaxItems) {
 		this.historyMaxItems = historyMaxItems;
 		return this;
 	}
 
-	public String getHistoryMaxSize() {
-		return historyMaxSize;
+	/**
+	 * Maximum number of items in the history of entries
+	 */
+	public int getHistoryMaxItems() {
+		return historyMaxItems;
 	}
 
-	public KdbxMeta setHistoryMaxSize(final String historyMaxSize) {
+	/**
+	 * Maximum size in bytes of items in the history of entries
+	 */
+	public KdbxMeta setHistoryMaxSize(final int historyMaxSize) {
 		this.historyMaxSize = historyMaxSize;
 		return this;
 	}
 
-	public String getLastSelectedGroup() {
-		return lastSelectedGroup;
+	/**
+	 * Maximum size in bytes of items in the history of entries
+	 */
+	public int getHistoryMaxSize() {
+		return historyMaxSize;
 	}
 
+	/**
+	 * UUID of the last selected group
+	 */
 	public KdbxMeta setLastSelectedGroup(final String lastSelectedGroup) {
 		this.lastSelectedGroup = lastSelectedGroup;
 		return this;
 	}
 
-	public String getLastTopVisibleGroup() {
-		return lastTopVisibleGroup;
+	/**
+	 * UUID of the last selected group
+	 */
+	public String getLastSelectedGroup() {
+		return lastSelectedGroup;
 	}
 
-	public KdbxMeta setLastTopVisibleGroup(final String lastTopVisibleGroup) {
+	/**
+	 * UUID of the last scroll visible group
+	 */
+	public KdbxMeta setLastTopVisibleGroup(final KdbxUUID lastTopVisibleGroup) {
 		this.lastTopVisibleGroup = lastTopVisibleGroup;
 		return this;
 	}
 
-	public String getBinaries() {
-		return binaries;
+	/**
+	 * UUID of the last scroll visible group
+	 */
+	public KdbxUUID getLastTopVisibleGroup() {
+		return lastTopVisibleGroup;
 	}
 
-	public KdbxMeta setBinaries(final String binaries) {
+	/**
+	 * Binary data of entry attachments.
+	 * Only utilized in KDBX 3.1 or lower.
+	 * MAY not be present in KDBX 4.0 or higher.
+	 */
+	public KdbxMeta setBinaries(final List<KdbxBinary> binaries) {
 		this.binaries = binaries;
 		return this;
 	}
 
-	public KdbxMemoryProtection getMemoryProtection() {
-		return memoryProtection;
+	/**
+	 * Binary data of entry attachments.
+	 * Only utilized in KDBX 3.1 or lower.
+	 * MAY not be present in KDBX 4.0 or higher.
+	 */
+	public List<KdbxBinary> getBinaries() {
+		return binaries;
 	}
 
+	/**
+	 * Structure containing configuration of value protection
+	 */
 	public KdbxMeta setMemoryProtection(final KdbxMemoryProtection memoryProtection) {
 		this.memoryProtection = memoryProtection;
 		return this;
 	}
 
+	/**
+	 * Structure containing configuration of value protection
+	 */
+	public KdbxMemoryProtection getMemoryProtection() {
+		return memoryProtection;
+	}
+
+	/**
+	 * Binary data items of stored files.
+	 * Only utilized in KDBX 3.1 or lower.
+	 * MAY not be present in KDBX 4.0 or higher.
+	 */
+	public KdbxMeta setCustomData(final List<KdbxCustomDataItem> customData) {
+		this.customData = customData;
+		return this;
+	}
+
+	/**
+	 * Binary data items of stored files.
+	 * Only utilized in KDBX 3.1 or lower.
+	 * MAY not be present in KDBX 4.0 or higher.
+	 */
 	public List<KdbxCustomDataItem> getCustomData() {
 		return customData;
 	}
 
-	public KdbxMeta setCustomData(final List<KdbxCustomDataItem> customData) {
-		this.customData = customData;
+	/**
+	 * Binary data of custom configured icons
+	 */
+	public KdbxMeta setCustomIcons(final Map<KdbxUUID, byte[]> customIcons) {
+		this.customIcons = customIcons;
 		return this;
+	}
+
+	/**
+	 * Binary data of custom configured icons
+	 */
+	public Map<KdbxUUID, byte[]> getCustomIcons() {
+		return customIcons;
 	}
 }

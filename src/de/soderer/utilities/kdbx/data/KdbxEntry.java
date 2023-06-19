@@ -8,6 +8,7 @@ import java.util.Map;
 public class KdbxEntry {
 	private KdbxUUID uuid;
 	private int iconID;
+	public KdbxUUID customIconUuid;
 	private String foregroundColor;
 	private String backgroundColor;
 	private String overrideURL;
@@ -74,44 +75,58 @@ public class KdbxEntry {
 		return (String) items.get("Notes");
 	}
 
+	public KdbxEntry setIconID(final int iconID) {
+		this.iconID = iconID;
+		return this;
+	}
+
 	public int getIconID() {
 		return iconID;
 	}
 
-	public void setIconID(final int iconID) {
-		this.iconID = iconID;
+	public KdbxEntry setCustomIconUuid(final KdbxUUID customIconUuid) {
+		this.customIconUuid = customIconUuid;
+		return this;
+	}
+
+	public KdbxUUID getCustomIconUuid() {
+		return customIconUuid;
+	}
+
+	public KdbxEntry setForegroundColor(final String foregroundColor) {
+		this.foregroundColor = foregroundColor;
+		return this;
 	}
 
 	public String getForegroundColor() {
 		return foregroundColor;
 	}
 
-	public void setForegroundColor(final String foregroundColor) {
-		this.foregroundColor = foregroundColor;
+	public KdbxEntry setBackgroundColor(final String backgroundColor) {
+		this.backgroundColor = backgroundColor;
+		return this;
 	}
 
 	public String getBackgroundColor() {
 		return backgroundColor;
 	}
 
-	public void setBackgroundColor(final String backgroundColor) {
-		this.backgroundColor = backgroundColor;
+	public KdbxEntry setOverrideURL(final String overrideURL) {
+		this.overrideURL = overrideURL;
+		return this;
 	}
 
 	public String getOverrideURL() {
 		return overrideURL;
 	}
 
-	public void setOverrideURL(final String overrideURL) {
-		this.overrideURL = overrideURL;
+	public KdbxEntry setTags(final String tags) {
+		this.tags = tags;
+		return this;
 	}
 
 	public String getTags() {
 		return tags;
-	}
-
-	public void setTags(final String tags) {
-		this.tags = tags;
 	}
 
 	public KdbxEntry setTimes(final KdbxTimes times) {
@@ -132,22 +147,24 @@ public class KdbxEntry {
 		return (String) items.get(itemKey);
 	}
 
+	public KdbxEntry setItems(final Map<String, Object> items) {
+		this.items = items;
+		return this;
+	}
+
 	public Map<String, Object> getItems() {
 		return items;
 	}
 
-	public void setItems(final Map<String, Object> items) {
-		this.items = items;
-	}
-
-	public void setAutoType(final boolean enabled, final String dataTransferObfuscation, final String associationWindow, final String associationKeystrokeSequence) {
+	public KdbxEntry setAutoType(final boolean enabled, final String dataTransferObfuscation, final String associationWindow, final String associationKeystrokeSequence) {
 		autoTypeEnabled = enabled;
 		autoTypeDataTransferObfuscation = dataTransferObfuscation;
 		autoTypeAssociationWindow = associationWindow;
 		autoTypeAssociationKeystrokeSequence = associationKeystrokeSequence;
+		return this;
 	}
 
-	public boolean getAutoTypeEnabled() {
+	public boolean isAutoTypeEnabled() {
 		return autoTypeEnabled;
 	}
 

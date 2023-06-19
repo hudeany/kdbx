@@ -13,7 +13,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -21,6 +21,7 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
@@ -149,22 +150,6 @@ public class Utilities {
 	}
 
 	private static final Pattern BASE64_PATTERN = Pattern.compile("^@(?=(.{4})*$)[A-Za-z0-9+/]*={0,2}$");
-
-	public interface IOBiFunction<A, B, C> {
-		C apply(A a, B b) throws IOException;
-	}
-
-	public interface IOFunction<A, B> {
-		B apply(A value) throws IOException;
-	}
-
-	public interface ThrowingConsumer<A> {
-		void consume(A a) throws IOException;
-	}
-
-	public interface ThrowingBiConsumer<A, B> {
-		void consume(A a, B b) throws IOException;
-	}
 
 	public static boolean isBase64(final String s) {
 		if (Utilities.isNotBlank(s)) {
@@ -370,7 +355,7 @@ public class Utilities {
 	}
 
 	public static Map<String, Node> getChildNodesMap(final Node dataNode) {
-		final Map<String, Node> childNodes = new HashMap<>();
+		final Map<String, Node> childNodes = new LinkedHashMap<>();
 		final NodeList childNodesList = dataNode.getChildNodes();
 		for (int i = 0; i < childNodesList.getLength(); i++) {
 			final Node childNode = childNodesList.item(i);
@@ -380,5 +365,18 @@ public class Utilities {
 		}
 
 		return childNodes;
+	}
+
+	public static Document createNewDocument() throws ParserConfigurationException {
+		final DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+		final DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+		final Document document = documentBuilder.newDocument();
+		return document;
+	}
+
+	public static Node appendNode(final Node baseNode, final String tagName) {
+		final Node newNode = baseNode.getOwnerDocument().createElement(tagName);
+		baseNode.appendChild(newNode);
+		return newNode;
 	}
 }

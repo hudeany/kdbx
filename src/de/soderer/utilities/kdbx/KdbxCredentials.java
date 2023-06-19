@@ -103,9 +103,9 @@ public class KdbxCredentials {
 		}
 
 		if (windowsUserAccount != null) {
-			final byte[] windowsUserAccountHash = null;// = MessageDigest.getInstance("sha256").digest(windowsUserAccount);
-			concat.write(windowsUserAccountHash, 0, windowsUserAccountHash.length);
 			// TODO
+			// final byte[] windowsUserAccountHash = null;// = MessageDigest.getInstance("sha256").digest(windowsUserAccount);
+			// concat.write(windowsUserAccountHash, 0, windowsUserAccountHash.length);
 			throw new RuntimeException("WindowsUserAccount not supported yet");
 		}
 

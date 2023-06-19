@@ -2,7 +2,7 @@ package de.soderer.utilities.kdbx;
 
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -15,7 +15,7 @@ public class KdbxDatabase {
 	public KdbxMeta meta = new KdbxMeta();
 	public List<KdbxGroup> groups = new ArrayList<>();
 	public List<KdbxEntry> entries = new ArrayList<>();
-	public Map<KdbxUUID, ZonedDateTime> deletedObjects = new HashMap<>();
+	public Map<KdbxUUID, ZonedDateTime> deletedObjects = new LinkedHashMap<>();
 
 	public KdbxDatabase setMeta(final KdbxMeta kdbxMeta) {
 		meta = kdbxMeta;
@@ -93,6 +93,17 @@ public class KdbxDatabase {
 			}
 		}
 		return null;
+	}
+
+	public List<KdbxGroup> getAllGroups() {
+		final List<KdbxGroup> groupsList = new ArrayList<>();
+		for (final KdbxGroup group : groups) {
+			groupsList.add(group);
+		}
+		for (final KdbxGroup group : groups) {
+			groupsList.addAll(group.getAllGroups());
+		}
+		return groupsList;
 	}
 
 	public List<KdbxEntry> getAllEntries() {

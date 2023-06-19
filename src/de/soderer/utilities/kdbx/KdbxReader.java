@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
@@ -35,11 +36,11 @@ import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import de.soderer.utilities.kdbx.data.KdbxBinary;
 import de.soderer.utilities.kdbx.data.KdbxConstants;
 import de.soderer.utilities.kdbx.data.KdbxConstants.InnerEncryptionAlgorithm;
 import de.soderer.utilities.kdbx.data.KdbxConstants.KdbxInnerHeaderType;
@@ -137,15 +138,18 @@ public class KdbxReader implements AutoCloseable {
 
 			final KdbxDatabase database = new KdbxDatabase();
 
-			final Element rootNode = document.getDocumentElement();
+			final Node rootNode = document.getDocumentElement();
+			if (!"KeePassFile".equals(rootNode.getNodeName())) {
+				throw new Exception("Unexpected xml root node name: " + rootNode.getNodeName());
+			}
 			final NodeList childNodes = rootNode.getChildNodes();
 			for (int i = 0; i < childNodes.getLength(); i++) {
 				final Node childNode = childNodes.item(i);
 				if (childNode.getNodeType() != Node.TEXT_NODE) {
 					if ("Meta".equals(childNode.getNodeName())) {
-						readKdbxMetaData(dataFormatVersion, database, childNode);
+						database.setMeta(readKdbxMetaData(dataFormatVersion, childNode));
 					} else if ("Root".equals(childNode.getNodeName())) {
-						readKdbxRoot(dataFormatVersion, database, childNode);
+						readRoot(dataFormatVersion, database, childNode);
 					} else {
 						throw new Exception("Unexpected data node name: " + childNode.getNodeName());
 					}
@@ -423,7 +427,7 @@ public class KdbxReader implements AutoCloseable {
 		}
 	}
 
-	private static void readKdbxMetaData(final Version dataFormatVersion, final KdbxDatabase database, final Node metaNode) throws Exception {
+	private static KdbxMeta readKdbxMetaData(final Version dataFormatVersion, final Node metaNode) throws Exception {
 		final KdbxMeta kdbxMeta = new KdbxMeta();
 		final NodeList childNodes = metaNode.getChildNodes();
 		for (int i = 0; i < childNodes.getLength(); i++) {
@@ -448,45 +452,49 @@ public class KdbxReader implements AutoCloseable {
 				} else if ("DefaultUserNameChanged".equals(childNode.getNodeName())) {
 					kdbxMeta.setDefaultUserNameChanged(parseDateTimeValue(dataFormatVersion, childNode));
 				} else if ("MaintenanceHistoryDays".equals(childNode.getNodeName())) {
-					kdbxMeta.setMaintenanceHistoryDays(parseStringValue(childNode));
+					kdbxMeta.setMaintenanceHistoryDays(parseIntegerValue(childNode));
 				} else if ("Color".equals(childNode.getNodeName())) {
 					kdbxMeta.setColor(parseStringValue(childNode));
 				} else if ("MasterKeyChanged".equals(childNode.getNodeName())) {
 					kdbxMeta.setMasterKeyChanged(parseDateTimeValue(dataFormatVersion, childNode));
 				} else if ("MasterKeyChangeRec".equals(childNode.getNodeName())) {
-					kdbxMeta.setMasterKeyChangeRec(parseStringValue(childNode));
+					kdbxMeta.setMasterKeyChangeRec(parseIntegerValue(childNode));
 				} else if ("MasterKeyChangeForce".equals(childNode.getNodeName())) {
-					kdbxMeta.setMasterKeyChangeForce(parseStringValue(childNode));
+					kdbxMeta.setMasterKeyChangeForce(parseIntegerValue(childNode));
+				} else if ("MasterKeyChangeForceOnce".equals(childNode.getNodeName())) {
+					kdbxMeta.setMasterKeyChangeForceOnce(parseBooleanValue(childNode));
 				} else if ("RecycleBinEnabled".equals(childNode.getNodeName())) {
 					kdbxMeta.setRecycleBinEnabled(parseStringValue(childNode));
 				} else if ("RecycleBinUUID".equals(childNode.getNodeName())) {
-					kdbxMeta.setRecycleBinUUID(parseStringValue(childNode));
+					kdbxMeta.setRecycleBinUUID(parseUuidValue(childNode));
 				} else if ("RecycleBinChanged".equals(childNode.getNodeName())) {
 					kdbxMeta.setRecycleBinChanged(parseDateTimeValue(dataFormatVersion, childNode));
 				} else if ("EntryTemplatesGroup".equals(childNode.getNodeName())) {
-					kdbxMeta.setEntryTemplatesGroup(parseStringValue(childNode));
+					kdbxMeta.setEntryTemplatesGroup(parseUuidValue(childNode));
 				} else if ("EntryTemplatesGroupChanged".equals(childNode.getNodeName())) {
 					kdbxMeta.setEntryTemplatesGroupChanged(parseDateTimeValue(dataFormatVersion, childNode));
 				} else if ("HistoryMaxItems".equals(childNode.getNodeName())) {
-					kdbxMeta.setHistoryMaxItems(parseStringValue(childNode));
+					kdbxMeta.setHistoryMaxItems(parseIntegerValue(childNode));
 				} else if ("HistoryMaxSize".equals(childNode.getNodeName())) {
-					kdbxMeta.setHistoryMaxSize(parseStringValue(childNode));
+					kdbxMeta.setHistoryMaxSize(parseIntegerValue(childNode));
 				} else if ("LastSelectedGroup".equals(childNode.getNodeName())) {
 					kdbxMeta.setLastSelectedGroup(parseStringValue(childNode));
 				} else if ("LastTopVisibleGroup".equals(childNode.getNodeName())) {
-					kdbxMeta.setLastTopVisibleGroup(parseStringValue(childNode));
+					kdbxMeta.setLastTopVisibleGroup(parseUuidValue(childNode));
 				} else if ("Binaries".equals(childNode.getNodeName())) {
-					kdbxMeta.setBinaries(parseStringValue(childNode));
+					kdbxMeta.setBinaries(parseBinariesData(childNode));
 				} else if ("MemoryProtection".equals(childNode.getNodeName())) {
 					kdbxMeta.setMemoryProtection(parseMemoryProtection(childNode));
 				} else if ("CustomData".equals(childNode.getNodeName())) {
 					kdbxMeta.setCustomData(parseCustomData(dataFormatVersion, childNode));
+				} else if ("CustomIcons".equals(childNode.getNodeName())) {
+					kdbxMeta.setCustomIcons(parseCustomIcons(childNode));
 				} else {
 					throw new Exception("Unexpected meta attribute node name: " + childNode.getNodeName());
 				}
 			}
 		}
-		database.setMeta(kdbxMeta);
+		return kdbxMeta;
 	}
 
 	private static KdbxMemoryProtection parseMemoryProtection(final Node memoryProtectionNode) throws Exception {
@@ -549,48 +557,56 @@ public class KdbxReader implements AutoCloseable {
 		return customDataItem;
 	}
 
-	private void readKdbxRoot(final Version dataFormatVersion, final KdbxDatabase database, final Node rootNode) throws Exception {
+	private static List<KdbxBinary> parseBinariesData(final Node binaryNode) throws Exception {
+		final List<KdbxBinary> binaryItems = new ArrayList<>();
+		final NodeList binaryNodes = binaryNode.getChildNodes();
+		for (int i = 0; i < binaryNodes.getLength(); i++) {
+			final Node binaryChildNode = binaryNodes.item(i);
+			if (binaryChildNode.getNodeType() != Node.TEXT_NODE) {
+				if ("Binary".equals(binaryChildNode.getNodeName())) {
+					final int id = Integer.parseInt(Utilities.getAttributeValue(binaryChildNode, "ID"));
+					final boolean compressed = "True".equals(Utilities.getAttributeValue(binaryChildNode, "Compressed"));
+					final String dataBase64String = parseStringValue(binaryChildNode);
+					final byte[] data = Base64.getDecoder().decode(dataBase64String);
+					binaryItems.add(new KdbxBinary().setId(id).setCompressed(compressed).setData(data));
+				} else {
+					throw new Exception("Unexpected binary node name: " + binaryChildNode.getNodeName());
+				}
+			}
+		}
+		return binaryItems;
+	}
+
+	private static Map<KdbxUUID, byte[]> parseCustomIcons(final Node customIconsNode) throws Exception {
+		final Map<KdbxUUID, byte[]> customIcons = new LinkedHashMap<>();
+		final NodeList customIconsChildNodes = customIconsNode.getChildNodes();
+		for (int i = 0; i < customIconsChildNodes.getLength(); i++) {
+			final Node customIconNode = customIconsChildNodes.item(i);
+			if (customIconNode.getNodeType() != Node.TEXT_NODE) {
+				if ("Icon".equals(customIconNode.getNodeName())) {
+					final KdbxUUID uuid = parseUuidValue(Utilities.getChildNodesMap(customIconsNode).get("UUID"));
+					final String dataBase64String = Utilities.getNodeValue(Utilities.getChildNodesMap(customIconsNode).get("Data"));
+					final byte[] data = Base64.getDecoder().decode(dataBase64String);
+					customIcons.put(uuid, data);
+				} else {
+					throw new Exception("Unexpected custom icon node name: " + customIconNode.getNodeName());
+				}
+			}
+		}
+		return customIcons;
+	}
+
+	private void readRoot(final Version dataFormatVersion, final KdbxDatabase database, final Node rootNode) throws Exception {
 		final NodeList childNodes = rootNode.getChildNodes();
 		for (int i = 0; i < childNodes.getLength(); i++) {
 			final Node childNode = childNodes.item(i);
 			if (childNode.getNodeType() != Node.TEXT_NODE) {
 				if ("Group".equals(childNode.getNodeName())) {
-					database.getGroups().add(readKdbxGroup(dataFormatVersion, childNode));
+					database.getGroups().add(readGroup(dataFormatVersion, childNode));
 				} else if ("Entry".equals(childNode.getNodeName())) {
-					database.getEntries().add(readKdbxEntry(dataFormatVersion, childNode));
+					database.getEntries().add(readEntry(dataFormatVersion, childNode));
 				} else if ("DeletedObjects".equals(childNode.getNodeName())) {
-					final NodeList deletedObjectsChildNodes = childNode.getChildNodes();
-					for (int j = 0; j < deletedObjectsChildNodes.getLength(); j++) {
-						final Node deletedObjectsChildNode = deletedObjectsChildNodes.item(j);
-						if (deletedObjectsChildNode.getNodeType() != Node.TEXT_NODE) {
-							if ("DeletedObject".equals(deletedObjectsChildNode.getNodeName())) {
-								KdbxUUID uuid = null;
-								ZonedDateTime deletionTime = null;
-								final NodeList deletedObjectChildNodes = deletedObjectsChildNode.getChildNodes();
-								for (int k = 0; k < deletedObjectChildNodes.getLength(); k++) {
-									final Node deletedObjectChildNode = deletedObjectChildNodes.item(k);
-									if (deletedObjectChildNode.getNodeType() != Node.TEXT_NODE) {
-										if ("UUID".equals(deletedObjectChildNode.getNodeName())) {
-											uuid = parseUuidValue(deletedObjectChildNode);
-										} else if ("DeletionTime".equals(deletedObjectChildNode.getNodeName())) {
-											deletionTime = parseDateTimeValue(dataFormatVersion, deletedObjectChildNode);
-										} else {
-											throw new Exception("Unexpected root data node name: " + childNode.getNodeName());
-										}
-									}
-								}
-								if (uuid == null) {
-									throw new Exception("Invalid deleted object node: Missing uuid");
-								} else if (deletionTime == null) {
-									throw new Exception("Invalid deleted object node for uuid '" + uuid.toHex() + "': Missing deletionTime");
-								} else {
-									database.getDeletedObjects().put(uuid, deletionTime);
-								}
-							} else {
-								throw new Exception("Unexpected deleted object data node name: " + deletedObjectsChildNode.getNodeName());
-							}
-						}
-					}
+					readDeletedObjects(dataFormatVersion, database, childNode);
 				} else {
 					throw new Exception("Unexpected root data node name: " + childNode.getNodeName());
 				}
@@ -598,7 +614,42 @@ public class KdbxReader implements AutoCloseable {
 		}
 	}
 
-	private KdbxGroup readKdbxGroup(final Version dataFormatVersion, final Node groupNode) throws Exception {
+	private static void readDeletedObjects(final Version dataFormatVersion, final KdbxDatabase database, final Node childNode) throws Exception {
+		final NodeList deletedObjectsChildNodes = childNode.getChildNodes();
+		for (int j = 0; j < deletedObjectsChildNodes.getLength(); j++) {
+			final Node deletedObjectsChildNode = deletedObjectsChildNodes.item(j);
+			if (deletedObjectsChildNode.getNodeType() != Node.TEXT_NODE) {
+				if ("DeletedObject".equals(deletedObjectsChildNode.getNodeName())) {
+					KdbxUUID uuid = null;
+					ZonedDateTime deletionTime = null;
+					final NodeList deletedObjectChildNodes = deletedObjectsChildNode.getChildNodes();
+					for (int k = 0; k < deletedObjectChildNodes.getLength(); k++) {
+						final Node deletedObjectChildNode = deletedObjectChildNodes.item(k);
+						if (deletedObjectChildNode.getNodeType() != Node.TEXT_NODE) {
+							if ("UUID".equals(deletedObjectChildNode.getNodeName())) {
+								uuid = parseUuidValue(deletedObjectChildNode);
+							} else if ("DeletionTime".equals(deletedObjectChildNode.getNodeName())) {
+								deletionTime = parseDateTimeValue(dataFormatVersion, deletedObjectChildNode);
+							} else {
+								throw new Exception("Unexpected root data node name: " + childNode.getNodeName());
+							}
+						}
+					}
+					if (uuid == null) {
+						throw new Exception("Invalid deleted object node: Missing uuid");
+					} else if (deletionTime == null) {
+						throw new Exception("Invalid deleted object node for uuid '" + uuid.toHex() + "': Missing deletionTime");
+					} else {
+						database.getDeletedObjects().put(uuid, deletionTime);
+					}
+				} else {
+					throw new Exception("Unexpected deleted object data node name: " + deletedObjectsChildNode.getNodeName());
+				}
+			}
+		}
+	}
+
+	private KdbxGroup readGroup(final Version dataFormatVersion, final Node groupNode) throws Exception {
 		final KdbxGroup group = new KdbxGroup();
 		final NodeList childNodes = groupNode.getChildNodes();
 		for (int i = 0; i < childNodes.getLength(); i++) {
@@ -613,21 +664,25 @@ public class KdbxReader implements AutoCloseable {
 				} else if ("IconID".equals(childNode.getNodeName())) {
 					group.setIconID(parseIntegerValue(childNode));
 				} else if ("IsExpanded".equals(childNode.getNodeName())) {
-					group.setIsExpanded(parseBooleanValue(childNode));
+					group.setExpanded(parseBooleanValue(childNode));
 				} else if ("DefaultAutoTypeSequence".equals(childNode.getNodeName())) {
 					group.setDefaultAutoTypeSequence(parseStringValue(childNode));
 				} else if ("EnableAutoType".equals(childNode.getNodeName())) {
-					group.setEnableAutoType(parseStringValue(childNode));
+					group.setEnableAutoType(parseBooleanValue(childNode));
 				} else if ("EnableSearching".equals(childNode.getNodeName())) {
-					group.setEnableSearching(parseStringValue(childNode));
+					group.setEnableSearching(parseBooleanValue(childNode));
 				} else if ("LastTopVisibleEntry".equals(childNode.getNodeName())) {
 					group.setLastTopVisibleEntry(parseUuidValue(childNode));
 				} else if ("Times".equals(childNode.getNodeName())) {
 					group.setTimes(readKdbxTimes(dataFormatVersion, childNode));
 				} else if ("Group".equals(childNode.getNodeName())) {
-					group.getGroups().add(readKdbxGroup(dataFormatVersion, childNode));
+					group.getGroups().add(readGroup(dataFormatVersion, childNode));
 				} else if ("Entry".equals(childNode.getNodeName())) {
-					group.getEntries().add(readKdbxEntry(dataFormatVersion, childNode));
+					group.getEntries().add(readEntry(dataFormatVersion, childNode));
+				} else if ("CustomIconUUID".equals(childNode.getNodeName())) {
+					group.setCustomIconUuid(parseUuidValue(childNode));
+				} else if ("CustomData".equals(childNode.getNodeName())) {
+					group.setCustomData(parseCustomData(dataFormatVersion, childNode));
 				} else {
 					throw new Exception("Unexpected group data node name: " + childNode.getNodeName());
 				}
@@ -664,7 +719,7 @@ public class KdbxReader implements AutoCloseable {
 		return group;
 	}
 
-	private KdbxEntry readKdbxEntry(final Version dataFormatVersion, final Node entryNode) throws Exception {
+	private KdbxEntry readEntry(final Version dataFormatVersion, final Node entryNode) throws Exception {
 		final KdbxEntry entry = new KdbxEntry();
 		final NodeList childNodes = entryNode.getChildNodes();
 		for (int i = 0; i < childNodes.getLength(); i++) {
@@ -727,12 +782,14 @@ public class KdbxReader implements AutoCloseable {
 						final Node historyChildNode = historyChildNodes.item(j);
 						if (historyChildNode.getNodeType() != Node.TEXT_NODE) {
 							if ("Entry".equals(historyChildNode.getNodeName())) {
-								entry.getHistory().add(readKdbxEntry(dataFormatVersion, historyChildNode));
+								entry.getHistory().add(readEntry(dataFormatVersion, historyChildNode));
 							} else {
 								throw new Exception("Unexpected history entry data node name: " + historyChildNode.getNodeName());
 							}
 						}
 					}
+				} else if ("CustomIconUUID".equals(childNode.getNodeName())) {
+					entry.setCustomIconUuid(parseUuidValue(childNode));
 				} else {
 					throw new Exception("Unexpected entry data node name: " + childNode.getNodeName());
 				}
@@ -741,7 +798,7 @@ public class KdbxReader implements AutoCloseable {
 		return entry;
 	}
 
-	public static String parseStringValue(final Node stringValueNode) {
+	private static String parseStringValue(final Node stringValueNode) {
 		if (stringValueNode.getNodeValue() != null) {
 			return stringValueNode.getNodeValue();
 		} else if (stringValueNode.getFirstChild() != null) {
@@ -751,7 +808,7 @@ public class KdbxReader implements AutoCloseable {
 		}
 	}
 
-	public void parseKeyValue(final Map<String, Object> items, final Node keyValueNode) throws Exception {
+	private void parseKeyValue(final Map<String, Object> items, final Node keyValueNode) throws Exception {
 		String key = null;
 		String value = null;
 		final NodeList childNodes = keyValueNode.getChildNodes();
