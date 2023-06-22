@@ -27,11 +27,15 @@ public class KdbxUUID {
 	}
 
 	public static KdbxUUID fromBase64(final String base64String) {
-		try {
-			final byte[] uuidBytes = Base64.getDecoder().decode(base64String);
-			return new KdbxUUID(uuidBytes);
-		} catch (final Exception e) {
-			throw new RuntimeException("Invalid base64 string value for UUID: " + base64String, e);
+		if (Utilities.isBlank(base64String)) {
+			return null;
+		} else {
+			try {
+				final byte[] uuidBytes = Base64.getDecoder().decode(base64String);
+				return new KdbxUUID(uuidBytes);
+			} catch (final Exception e) {
+				throw new RuntimeException("Invalid base64 string value for UUID: " + base64String, e);
+			}
 		}
 	}
 

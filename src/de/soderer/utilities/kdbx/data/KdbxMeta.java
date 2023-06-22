@@ -21,14 +21,14 @@ public class KdbxMeta {
 	private int masterKeyChangeRec;
 	private int masterKeyChangeForce;
 	private boolean masterKeyChangeForceOnce;
-	private String recycleBinEnabled;
+	private boolean recycleBinEnabled;
 	private KdbxUUID recycleBinUUID;
 	private ZonedDateTime recycleBinChanged;
 	private KdbxUUID entryTemplatesGroup;
 	private ZonedDateTime entryTemplatesGroupChanged;
 	private int historyMaxItems;
 	private int historyMaxSize;
-	private String lastSelectedGroup;
+	private KdbxUUID lastSelectedGroup;
 	private KdbxUUID lastTopVisibleGroup;
 	private List<KdbxBinary> binaries;
 	private KdbxMemoryProtection memoryProtection;
@@ -271,7 +271,7 @@ public class KdbxMeta {
 	/**
 	 * Activation state of the recycling bin
 	 */
-	public KdbxMeta setRecycleBinEnabled(final String recycleBinEnabled) {
+	public KdbxMeta setRecycleBinEnabled(final boolean recycleBinEnabled) {
 		this.recycleBinEnabled = recycleBinEnabled;
 		return this;
 	}
@@ -279,7 +279,7 @@ public class KdbxMeta {
 	/**
 	 * Activation state of the recycling bin
 	 */
-	public String getRecycleBinEnabled() {
+	public boolean isRecycleBinEnabled() {
 		return recycleBinEnabled;
 	}
 
@@ -376,7 +376,7 @@ public class KdbxMeta {
 	/**
 	 * UUID of the last selected group
 	 */
-	public KdbxMeta setLastSelectedGroup(final String lastSelectedGroup) {
+	public KdbxMeta setLastSelectedGroup(final KdbxUUID lastSelectedGroup) {
 		this.lastSelectedGroup = lastSelectedGroup;
 		return this;
 	}
@@ -384,7 +384,7 @@ public class KdbxMeta {
 	/**
 	 * UUID of the last selected group
 	 */
-	public String getLastSelectedGroup() {
+	public KdbxUUID getLastSelectedGroup() {
 		return lastSelectedGroup;
 	}
 

@@ -379,4 +379,14 @@ public class Utilities {
 		baseNode.appendChild(newNode);
 		return newNode;
 	}
+
+	public static Node appendTextValueNode(final Node baseNode, final String tagName, final String tagValue) {
+		final Node newNode = appendNode(baseNode, tagName);
+		if (tagValue == null) {
+			newNode.appendChild(baseNode.getOwnerDocument().createTextNode("<null>"));
+		} else {
+			newNode.appendChild(baseNode.getOwnerDocument().createTextNode(tagValue));
+		}
+		return newNode;
+	}
 }

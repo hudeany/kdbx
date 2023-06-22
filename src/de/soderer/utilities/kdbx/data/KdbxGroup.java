@@ -144,7 +144,7 @@ public class KdbxGroup {
 	/**
 	 * Auto type is enabled for this group
 	 */
-	public boolean getEnableAutoType() {
+	public boolean isEnableAutoType() {
 		return enableAutoType;
 	}
 
@@ -159,7 +159,7 @@ public class KdbxGroup {
 	/**
 	 * Include this group is search operations
 	 */
-	public boolean getEnableSearching() {
+	public boolean isEnableSearching() {
 		return enableSearching;
 	}
 

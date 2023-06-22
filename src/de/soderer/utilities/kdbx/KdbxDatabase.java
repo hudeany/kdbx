@@ -12,10 +12,20 @@ import de.soderer.utilities.kdbx.data.KdbxMeta;
 import de.soderer.utilities.kdbx.data.KdbxUUID;
 
 public class KdbxDatabase {
-	public KdbxMeta meta = new KdbxMeta();
-	public List<KdbxGroup> groups = new ArrayList<>();
-	public List<KdbxEntry> entries = new ArrayList<>();
-	public Map<KdbxUUID, ZonedDateTime> deletedObjects = new LinkedHashMap<>();
+	private List<byte[]> binaryAttachments = null;
+	private KdbxMeta meta = new KdbxMeta();
+	private List<KdbxGroup> groups = new ArrayList<>();
+	private List<KdbxEntry> entries = new ArrayList<>();
+	private final Map<KdbxUUID, ZonedDateTime> deletedObjects = new LinkedHashMap<>();
+
+	public KdbxDatabase setBinaryAttachments(final List<byte[]> binaryAttachments) {
+		this.binaryAttachments = binaryAttachments;
+		return this;
+	}
+
+	public List<byte[]> getBinaryAttachments() {
+		return binaryAttachments;
+	}
 
 	public KdbxDatabase setMeta(final KdbxMeta kdbxMeta) {
 		meta = kdbxMeta;

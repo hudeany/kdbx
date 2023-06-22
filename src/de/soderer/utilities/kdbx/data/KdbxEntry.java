@@ -17,9 +17,12 @@ public class KdbxEntry {
 	private Map<String, Object> items = new LinkedHashMap<>();
 	private boolean autoTypeEnabled = false;
 	private String autoTypeDataTransferObfuscation;
+	private String autoTypeDefaultSequence;
 	private String autoTypeAssociationWindow;
 	private String autoTypeAssociationKeystrokeSequence;
+	private List<KdbxCustomDataItem> customData;
 	private final List<KdbxEntry> history = new ArrayList<>();
+	private final List<KdbxEntryBinary> binaries = new ArrayList<>();
 
 	public KdbxEntry setUuid(final KdbxUUID uuid) {
 		this.uuid = uuid;
@@ -156,9 +159,10 @@ public class KdbxEntry {
 		return items;
 	}
 
-	public KdbxEntry setAutoType(final boolean enabled, final String dataTransferObfuscation, final String associationWindow, final String associationKeystrokeSequence) {
+	public KdbxEntry setAutoType(final boolean enabled, final String dataTransferObfuscation, final String defaultSequence, final String associationWindow, final String associationKeystrokeSequence) {
 		autoTypeEnabled = enabled;
 		autoTypeDataTransferObfuscation = dataTransferObfuscation;
+		autoTypeDefaultSequence = defaultSequence;
 		autoTypeAssociationWindow = associationWindow;
 		autoTypeAssociationKeystrokeSequence = associationKeystrokeSequence;
 		return this;
@@ -172,6 +176,10 @@ public class KdbxEntry {
 		return autoTypeDataTransferObfuscation;
 	}
 
+	public String getAutoTypeDefaultSequence() {
+		return autoTypeDefaultSequence;
+	}
+
 	public String getAutoTypeAssociationWindow() {
 		return autoTypeAssociationWindow;
 	}
@@ -180,7 +188,26 @@ public class KdbxEntry {
 		return autoTypeAssociationKeystrokeSequence;
 	}
 
+	/**
+	 * Data items of stored files for this entry.
+	 */
+	public KdbxEntry setCustomData(final List<KdbxCustomDataItem> customData) {
+		this.customData = customData;
+		return this;
+	}
+
+	/**
+	 * Data items of stored files for this entry.
+	 */
+	public List<KdbxCustomDataItem> getCustomData() {
+		return customData;
+	}
+
 	public List<KdbxEntry> getHistory() {
 		return history;
+	}
+
+	public List<KdbxEntryBinary> getBinaries() {
+		return binaries;
 	}
 }
