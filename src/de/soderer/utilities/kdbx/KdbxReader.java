@@ -138,7 +138,7 @@ public class KdbxReader implements AutoCloseable {
 			copyInputStream.setCopyOnRead(false);
 
 			byte[] decryptedXmlPayloadData = null;
-			List<byte[]> binaryAttachments = null;
+			List<KdbxBinary> binaryAttachments = null;
 			if (dataFormatVersion.getMajorVersionNumber() == 3) {
 				decryptedXmlPayloadData = decryptVersion3(credentials, outerHeaders);
 			} else if (dataFormatVersion.getMajorVersionNumber() == 4) {
@@ -151,6 +151,7 @@ public class KdbxReader implements AutoCloseable {
 			final Document document = Utilities.parseXmlFile(decryptedXmlPayloadData);
 
 			final KdbxDatabase database = new KdbxDatabase();
+			database.setDataFormatVersion(dataFormatVersion);
 			database.setBinaryAttachments(binaryAttachments);
 
 			final Node rootNode = document.getDocumentElement();
@@ -164,7 +165,7 @@ public class KdbxReader implements AutoCloseable {
 				final Node childNode = childNodes.item(i);
 				if (childNode.getNodeType() != Node.TEXT_NODE) {
 					if ("Meta".equals(childNode.getNodeName())) {
-						database.setMeta(readKdbxMetaData(dataFormatVersion, childNode));
+						database.setMeta(readKdbxMetaData(dataFormatVersion, childNode, binaryAttachments));
 					} else if ("Root".equals(childNode.getNodeName())) {
 						readRoot(dataFormatVersion, database, childNode);
 					} else {
@@ -251,7 +252,7 @@ public class KdbxReader implements AutoCloseable {
 		return decryptedPayload;
 	}
 
-	private byte[] decryptVersion4(final KdbxCredentials credentials, final Map<KdbxOuterHeaderType, byte[]> outerHeaders, final byte[] outerHeadersDataBytes, final List<byte[]> binaryAttachments) throws Exception {
+	private byte[] decryptVersion4(final KdbxCredentials credentials, final Map<KdbxOuterHeaderType, byte[]> outerHeaders, final byte[] outerHeadersDataBytes, final List<KdbxBinary> binaryAttachments) throws Exception {
 		final byte[] decryptedPayload;
 		final byte[] kdfParamsBytes = outerHeaders.get(KdbxOuterHeaderType.KDF_PARAMETERS);
 		final VariantDictionary variantDictionary = VariantDictionary.read(new ByteArrayInputStream(kdfParamsBytes));
@@ -358,7 +359,10 @@ public class KdbxReader implements AutoCloseable {
 			final KdbxInnerHeaderType innerHeaderType = KdbxInnerHeaderType.getById(nextInnerHeaderStructure.getTypeId());
 			if (innerHeaderType == KdbxInnerHeaderType.BINARY_ATTACHMENT) {
 				// BINARY_ATTACHMENT data is referenced by entries via position id in data version 4.0 and higher
-				binaryAttachments.add(nextInnerHeaderStructure.getData());
+				final KdbxBinary binaryAttachment = new KdbxBinary();
+				binaryAttachment.setId(binaryAttachments.size() + 1);
+				binaryAttachment.setData(nextInnerHeaderStructure.getData());
+				binaryAttachments.add(binaryAttachment);
 			} else {
 				innerHeaders.put(innerHeaderType, nextInnerHeaderStructure.getData());
 			}
@@ -452,7 +456,7 @@ public class KdbxReader implements AutoCloseable {
 		}
 	}
 
-	private KdbxMeta readKdbxMetaData(final Version dataFormatVersion, final Node metaNode) throws Exception {
+	private KdbxMeta readKdbxMetaData(final Version dataFormatVersion, final Node metaNode, final List<KdbxBinary> binaryAttachments) throws Exception {
 		final KdbxMeta kdbxMeta = new KdbxMeta();
 		final NodeList childNodes = metaNode.getChildNodes();
 		for (int i = 0; i < childNodes.getLength(); i++) {
@@ -507,7 +511,7 @@ public class KdbxReader implements AutoCloseable {
 				} else if ("LastTopVisibleGroup".equals(childNode.getNodeName())) {
 					kdbxMeta.setLastTopVisibleGroup(parseUuidValue(childNode));
 				} else if ("Binaries".equals(childNode.getNodeName())) {
-					kdbxMeta.setBinaries(parseBinariesData(childNode));
+					binaryAttachments.addAll(parseBinariesData(childNode));
 				} else if ("MemoryProtection".equals(childNode.getNodeName())) {
 					kdbxMeta.setMemoryProtection(parseMemoryProtection(childNode));
 				} else if ("CustomData".equals(childNode.getNodeName())) {
@@ -789,7 +793,7 @@ public class KdbxReader implements AutoCloseable {
 				} else if ("String".equals(childNode.getNodeName())) {
 					parseKeyValue(entry.getItems(), childNode);
 				} else if ("Binary".equals(childNode.getNodeName())) {
-					readEntryBinary(childNode);
+					entry.getBinaries().add(readEntryBinary(childNode));
 				} else if ("AutoType".equals(childNode.getNodeName())) {
 					boolean enabled = false;
 					String dataTransferObfuscation = null;

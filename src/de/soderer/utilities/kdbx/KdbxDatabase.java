@@ -6,24 +6,46 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import de.soderer.utilities.kdbx.data.KdbxBinary;
 import de.soderer.utilities.kdbx.data.KdbxEntry;
 import de.soderer.utilities.kdbx.data.KdbxGroup;
 import de.soderer.utilities.kdbx.data.KdbxMeta;
 import de.soderer.utilities.kdbx.data.KdbxUUID;
+import de.soderer.utilities.kdbx.util.Version;
 
 public class KdbxDatabase {
-	private List<byte[]> binaryAttachments = null;
+	private Version dataFormatVersion;
+	private List<KdbxBinary> binaryAttachments = null;
 	private KdbxMeta meta = new KdbxMeta();
 	private List<KdbxGroup> groups = new ArrayList<>();
 	private List<KdbxEntry> entries = new ArrayList<>();
 	private final Map<KdbxUUID, ZonedDateTime> deletedObjects = new LinkedHashMap<>();
 
-	public KdbxDatabase setBinaryAttachments(final List<byte[]> binaryAttachments) {
+	public KdbxDatabase setDataFormatVersion(Version dataFormatVersion) {
+		this.dataFormatVersion = dataFormatVersion;
+		return this;
+	}
+
+	public Version getDataFormatVersion() {
+		return dataFormatVersion;
+	}
+
+	/**
+	 * Binary data of entry attachments.
+	 * Dataversion <= 3.1 --> stored in KdbxMeta binaries
+	 * Dataversion >= 4.0 --> stored in KdbxInnerHeaderType.BINARY_ATTACHMENT
+	 */
+	public KdbxDatabase setBinaryAttachments(final List<KdbxBinary> binaryAttachments) {
 		this.binaryAttachments = binaryAttachments;
 		return this;
 	}
 
-	public List<byte[]> getBinaryAttachments() {
+	/**
+	 * Binary data of entry attachments.
+	 * Dataversion <= 3.1 --> stored in KdbxMeta binaries
+	 * Dataversion >= 4.0 --> stored in KdbxInnerHeaderType.BINARY_ATTACHMENT
+	 */
+	public List<KdbxBinary> getBinaryAttachments() {
 		return binaryAttachments;
 	}
 

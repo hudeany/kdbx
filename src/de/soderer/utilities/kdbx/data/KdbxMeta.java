@@ -30,7 +30,6 @@ public class KdbxMeta {
 	private int historyMaxSize;
 	private KdbxUUID lastSelectedGroup;
 	private KdbxUUID lastTopVisibleGroup;
-	private List<KdbxBinary> binaries;
 	private KdbxMemoryProtection memoryProtection;
 	private List<KdbxCustomDataItem> customData;
 	public Map<KdbxUUID, byte[]> customIcons = new LinkedHashMap<>();
@@ -401,25 +400,6 @@ public class KdbxMeta {
 	 */
 	public KdbxUUID getLastTopVisibleGroup() {
 		return lastTopVisibleGroup;
-	}
-
-	/**
-	 * Binary data of entry attachments.
-	 * Only utilized in KDBX 3.1 or lower.
-	 * MAY not be present in KDBX 4.0 or higher.
-	 */
-	public KdbxMeta setBinaries(final List<KdbxBinary> binaries) {
-		this.binaries = binaries;
-		return this;
-	}
-
-	/**
-	 * Binary data of entry attachments.
-	 * Only utilized in KDBX 3.1 or lower.
-	 * MAY not be present in KDBX 4.0 or higher.
-	 */
-	public List<KdbxBinary> getBinaries() {
-		return binaries;
 	}
 
 	/**

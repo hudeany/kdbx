@@ -7,19 +7,31 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
+import de.soderer.utilities.kdbx.data.KdbxCustomDataItem;
 import de.soderer.utilities.kdbx.data.KdbxEntry;
+import de.soderer.utilities.kdbx.data.KdbxEntryBinary;
 import de.soderer.utilities.kdbx.data.KdbxGroup;
 import de.soderer.utilities.kdbx.data.KdbxMemoryProtection;
 import de.soderer.utilities.kdbx.data.KdbxMeta;
+import de.soderer.utilities.kdbx.data.KdbxTimes;
 import de.soderer.utilities.kdbx.data.KdbxUUID;
 import de.soderer.utilities.kdbx.util.Utilities;
 import de.soderer.utilities.kdbx.util.Version;
 
+/**
+ * Binary attachments
+ * The same data should not be stored multiple times.
+ * Dataversion <= 3.1 --> stored in KdbxMeta binaries
+ * Dataversion >= 4.0 --> stored in KdbxInnerHeaderType.BINARY_ATTACHMENT
+ */
 public class KdbxWriter implements AutoCloseable {
 	OutputStream outputStream;
 
@@ -59,37 +71,49 @@ public class KdbxWriter implements AutoCloseable {
 				throw new Exception("Entry with duplicate UUID found: " + entry.getUuid().toHex());
 			}
 		}
+		// TODO: check IconIDs
+		// TODO: check binary attachments
 	}
 
-	private void writeMetaNode(final Version dataFormatVersionToStore, final Node xmlDocumentRootNode, final KdbxMeta meta) {
+	private void writeMetaNode(final Version dataFormatVersion, final Node xmlDocumentRootNode, final KdbxMeta meta) {
 		final Node metaNode = Utilities.appendNode(xmlDocumentRootNode, "Meta");
 		Utilities.appendTextValueNode(metaNode, "Generator", meta.getGenerator());
 		Utilities.appendTextValueNode(metaNode, "HeaderHash", meta.getHeaderHash());
-		Utilities.appendTextValueNode(metaNode, "SettingsChanged", formatDateTimeValue(dataFormatVersionToStore, meta.getSettingsChanged()));
+		Utilities.appendTextValueNode(metaNode, "SettingsChanged", formatDateTimeValue(dataFormatVersion, meta.getSettingsChanged()));
 		Utilities.appendTextValueNode(metaNode, "DatabaseName", meta.getDatabaseName());
-		Utilities.appendTextValueNode(metaNode, "DatabaseNameChanged", formatDateTimeValue(dataFormatVersionToStore, meta.getDatabaseNameChanged()));
+		Utilities.appendTextValueNode(metaNode, "DatabaseNameChanged", formatDateTimeValue(dataFormatVersion, meta.getDatabaseNameChanged()));
 		Utilities.appendTextValueNode(metaNode, "DatabaseDescription", meta.getDatabaseDescription());
-		Utilities.appendTextValueNode(metaNode, "DatabaseDescriptionChanged", formatDateTimeValue(dataFormatVersionToStore, meta.getDatabaseDescriptionChanged()));
+		Utilities.appendTextValueNode(metaNode, "DatabaseDescriptionChanged", formatDateTimeValue(dataFormatVersion, meta.getDatabaseDescriptionChanged()));
 		Utilities.appendTextValueNode(metaNode, "DefaultUserName", meta.getDefaultUserName());
-		Utilities.appendTextValueNode(metaNode, "DefaultUserNameChanged", formatDateTimeValue(dataFormatVersionToStore, meta.getDefaultUserNameChanged()));
+		Utilities.appendTextValueNode(metaNode, "DefaultUserNameChanged", formatDateTimeValue(dataFormatVersion, meta.getDefaultUserNameChanged()));
 		Utilities.appendTextValueNode(metaNode, "MaintenanceHistoryDays", formatIntegerValue(meta.getMaintenanceHistoryDays()));
 		Utilities.appendTextValueNode(metaNode, "Color", meta.getColor());
-		Utilities.appendTextValueNode(metaNode, "MasterKeyChanged", formatDateTimeValue(dataFormatVersionToStore, meta.getMasterKeyChanged()));
+		Utilities.appendTextValueNode(metaNode, "MasterKeyChanged", formatDateTimeValue(dataFormatVersion, meta.getMasterKeyChanged()));
 		Utilities.appendTextValueNode(metaNode, "MasterKeyChangeRec", formatIntegerValue(meta.getMasterKeyChangeRec()));
 		Utilities.appendTextValueNode(metaNode, "MasterKeyChangeForce", formatIntegerValue(meta.getMasterKeyChangeForce()));
 		Utilities.appendTextValueNode(metaNode, "RecycleBinEnabled", formatBooleanValue(meta.isRecycleBinEnabled()));
 		Utilities.appendTextValueNode(metaNode, "RecycleBinUUID", formatKdbxUUIDValue(meta.getRecycleBinUUID()));
-		Utilities.appendTextValueNode(metaNode, "RecycleBinChanged", formatDateTimeValue(dataFormatVersionToStore, meta.getRecycleBinChanged()));
+		Utilities.appendTextValueNode(metaNode, "RecycleBinChanged", formatDateTimeValue(dataFormatVersion, meta.getRecycleBinChanged()));
 		Utilities.appendTextValueNode(metaNode, "EntryTemplatesGroup", formatKdbxUUIDValue(meta.getEntryTemplatesGroup()));
-		Utilities.appendTextValueNode(metaNode, "EntryTemplatesGroupChanged", formatDateTimeValue(dataFormatVersionToStore, meta.getEntryTemplatesGroupChanged()));
+		Utilities.appendTextValueNode(metaNode, "EntryTemplatesGroupChanged", formatDateTimeValue(dataFormatVersion, meta.getEntryTemplatesGroupChanged()));
 		Utilities.appendTextValueNode(metaNode, "HistoryMaxItems", formatIntegerValue(meta.getHistoryMaxItems()));
 		Utilities.appendTextValueNode(metaNode, "HistoryMaxSize", formatIntegerValue(meta.getHistoryMaxSize()));
 		Utilities.appendTextValueNode(metaNode, "LastSelectedGroup", formatKdbxUUIDValue(meta.getLastSelectedGroup()));
 		Utilities.appendTextValueNode(metaNode, "LastTopVisibleGroup", formatKdbxUUIDValue(meta.getLastTopVisibleGroup()));
-		Utilities.appendTextValueNode(metaNode, "Binaries", meta.getBinaries());
+		// TODO
+		//		Utilities.appendTextValueNode(metaNode, "Binaries", meta.getBinaries());
 		writeMemoryProtectionNode(metaNode, meta.getMemoryProtection());
-		Utilities.appendTextValueNode(metaNode, "CustomData", meta.getCustomData());
-		Utilities.appendTextValueNode(metaNode, "CustomIcons", meta.getCustomIcons());
+		writeCustomData(dataFormatVersion, metaNode, meta.getCustomData());
+		writeCustomIcons(metaNode, meta.getCustomIcons());
+	}
+
+	private void writeCustomIcons(final Node metaNode, final Map<KdbxUUID, byte[]> customIcons) {
+		final Node customIconsNode = Utilities.appendNode(metaNode, "CustomIcons");
+		for (final Entry<KdbxUUID, byte[]> customIcon : customIcons.entrySet()) {
+			final Node iconNode = Utilities.appendNode(customIconsNode, "Icon");
+			Utilities.appendTextValueNode(iconNode, "UUID", formatKdbxUUIDValue(customIcon.getKey()));
+			Utilities.appendTextValueNode(iconNode, "Data", Base64.getEncoder().encodeToString(customIcon.getValue()));
+		}
 	}
 
 	private void writeMemoryProtectionNode(final Node metaNode, final KdbxMemoryProtection memoryProtection) {
@@ -101,15 +125,18 @@ public class KdbxWriter implements AutoCloseable {
 		Utilities.appendTextValueNode(memoryProtectionNode, "ProtectNotes", formatBooleanValue(memoryProtection.isProtectNotes()));
 	}
 
-	private void writeRootNode(final Version dataFormatVersionToStore, final Node xmlDocumentRootNode, final KdbxDatabase database) {
+	private void writeRootNode(final Version dataFormatVersion, final Node xmlDocumentRootNode, final KdbxDatabase database) {
 		final Node rootNode = Utilities.appendNode(xmlDocumentRootNode, "Root");
 		for (final KdbxGroup group : database.getGroups()) {
-			writeRootNode(rootNode, group);
+			writeGroupNode(dataFormatVersion, rootNode, group);
+		}
+		for (final KdbxEntry entry : database.getEntries()) {
+			writeEntryNode(dataFormatVersion, rootNode, entry);
 		}
 	}
 
-	private void writeRootNode(final Node rootNode, final KdbxGroup group) {
-		final Node groupNode = Utilities.appendNode(rootNode, "Group");
+	private void writeGroupNode(final Version dataFormatVersion, final Node baseNode, final KdbxGroup group) {
+		final Node groupNode = Utilities.appendNode(baseNode, "Group");
 		Utilities.appendTextValueNode(groupNode, "UUID", formatKdbxUUIDValue(group.getUuid()));
 		Utilities.appendTextValueNode(groupNode, "Name", group.getName());
 		Utilities.appendTextValueNode(groupNode, "Notes", group.getNotes());
@@ -119,21 +146,85 @@ public class KdbxWriter implements AutoCloseable {
 		Utilities.appendTextValueNode(groupNode, "EnableAutoType", formatBooleanValue(group.isEnableAutoType()));
 		Utilities.appendTextValueNode(groupNode, "EnableSearching", formatBooleanValue(group.isEnableSearching()));
 		Utilities.appendTextValueNode(groupNode, "LastTopVisibleEntry", formatKdbxUUIDValue(group.getLastTopVisibleEntry()));
-		Utilities.appendTextValueNode(groupNode, "Times", group.getTimes());
+
+		writeTimes(dataFormatVersion, groupNode, group.getTimes());
+
 		for (final KdbxGroup subGroup : group.getGroups()) {
-			writeGroupNode(groupNode, subGroup);
+			writeGroupNode(dataFormatVersion, groupNode, subGroup);
 		}
+
 		for (final KdbxEntry entry : group.getEntries()) {
-			writeEntryNode(groupNode, entry);
+			writeEntryNode(dataFormatVersion, groupNode, entry);
 		}
+
 		Utilities.appendTextValueNode(groupNode, "CustomIconUUID", formatKdbxUUIDValue(group.getCustomIconUuid()));
-		Utilities.appendTextValueNode(groupNode, "CustomData", group.getCustomData());
+
+		writeCustomData(dataFormatVersion, groupNode, group.getCustomData());
 	}
 
-	private String formatDateTimeValue(final Version kdbxVersion, final ZonedDateTime dateTimeValue) {
+	private void writeCustomData(final Version dataFormatVersion, final Node baseNode, final List<KdbxCustomDataItem> customData) {
+		final Node customDataNode = Utilities.appendNode(baseNode, "CustomData");
+		for (final KdbxCustomDataItem customDataItem : customData) {
+			final Node customDataItemNode = Utilities.appendNode(customDataNode, "Item");
+			Utilities.appendTextValueNode(customDataItemNode, "Key", customDataItem.getKey());
+			Utilities.appendTextValueNode(customDataItemNode, "Value", customDataItem.getValue());
+			Utilities.appendTextValueNode(customDataItemNode, "LastModificationTime", formatDateTimeValue(dataFormatVersion, customDataItem.getLastModificationTime()));
+		}
+	}
+
+	private void writeEntryNode(final Version dataFormatVersion, final Node baseNode, final KdbxEntry entry) {
+		final Node entryNode = Utilities.appendNode(baseNode, "Entry");
+		Utilities.appendTextValueNode(entryNode, "UUID", formatKdbxUUIDValue(entry.getUuid()));
+		Utilities.appendTextValueNode(entryNode, "IconID", formatIntegerValue(entry.getIconID()));
+		Utilities.appendTextValueNode(entryNode, "ForegroundColor", entry.getForegroundColor());
+		Utilities.appendTextValueNode(entryNode, "BackgroundColor", entry.getBackgroundColor());
+		Utilities.appendTextValueNode(entryNode, "OverrideURL", entry.getOverrideURL());
+		Utilities.appendTextValueNode(entryNode, "Tags", entry.getTags());
+
+		writeTimes(dataFormatVersion, entryNode, entry.getTimes());
+
+		for (final Entry<String, Object> itemEntry : entry.getItems().entrySet()) {
+			final Node itemNode = Utilities.appendNode(entryNode, "String");
+			Utilities.appendTextValueNode(itemNode, "Key", itemEntry.getKey());
+			Utilities.appendTextValueNode(itemNode, "Value", (String) itemEntry.getValue());
+			// TODO encrypt
+		}
+
+		for (final KdbxEntryBinary entryBinary : entry.getBinaries()) {
+			// TODO
+		}
+
+		final Node autoTypeNode = Utilities.appendNode(entryNode, "AutoType");
+		Utilities.appendTextValueNode(autoTypeNode, "Enabled", formatBooleanValue(entry.isAutoTypeEnabled()));
+		Utilities.appendTextValueNode(autoTypeNode, "DataTransferObfuscation", entry.getAutoTypeDataTransferObfuscation());
+		Utilities.appendTextValueNode(autoTypeNode, "DefaultSequence", entry.getAutoTypeDefaultSequence());
+		final Node autoTypeAssociationNode = Utilities.appendNode(entryNode, "Association");
+		Utilities.appendTextValueNode(autoTypeAssociationNode, "Window", entry.getAutoTypeAssociationWindow());
+		Utilities.appendTextValueNode(autoTypeAssociationNode, "KeystrokeSequence", entry.getAutoTypeAssociationKeystrokeSequence());
+
+		final Node historyNode = Utilities.appendNode(entryNode, "History");
+		Utilities.appendTextValueNode(historyNode, "Entry", formatBooleanValue(entry.isAutoTypeEnabled()));
+
+		Utilities.appendTextValueNode(entryNode, "CustomIconUUID", formatKdbxUUIDValue(entry.getCustomIconUuid()));
+
+		writeCustomData(dataFormatVersion, entryNode, entry.getCustomData());
+	}
+
+	private void writeTimes(final Version dataFormatVersion, final Node baseNode, final KdbxTimes times) {
+		final Node timesNode = Utilities.appendNode(baseNode, "Times");
+		Utilities.appendTextValueNode(timesNode, "CreationTime", formatDateTimeValue(dataFormatVersion, times.getCreationTime()));
+		Utilities.appendTextValueNode(timesNode, "LastModificationTime", formatDateTimeValue(dataFormatVersion, times.getLastModificationTime()));
+		Utilities.appendTextValueNode(timesNode, "LastAccessTime", formatDateTimeValue(dataFormatVersion, times.getLastAccessTime()));
+		Utilities.appendTextValueNode(timesNode, "ExpiryTime", formatDateTimeValue(dataFormatVersion, times.getExpiryTime()));
+		Utilities.appendTextValueNode(timesNode, "Expires", formatBooleanValue(times.isExpires()));
+		Utilities.appendTextValueNode(timesNode, "UsageCount", formatIntegerValue(times.getUsageCount()));
+		Utilities.appendTextValueNode(timesNode, "LocationChanged", formatDateTimeValue(dataFormatVersion, times.getLocationChanged()));
+	}
+
+	private String formatDateTimeValue(final Version dataFormatVersion, final ZonedDateTime dateTimeValue) {
 		if (dateTimeValue == null ) {
 			return "";
-		} else if (kdbxVersion.getMajorVersionNumber() < 4) {
+		} else if (dataFormatVersion.getMajorVersionNumber() < 4) {
 			return DateTimeFormatter.ISO_DATE_TIME.format(dateTimeValue);
 		} else {
 			final Duration duration = Duration.between(ZonedDateTime.of(1, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC")), dateTimeValue);
