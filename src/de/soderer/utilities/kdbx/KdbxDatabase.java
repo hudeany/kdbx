@@ -2,9 +2,11 @@ package de.soderer.utilities.kdbx;
 
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import de.soderer.utilities.kdbx.data.KdbxBinary;
 import de.soderer.utilities.kdbx.data.KdbxEntry;
@@ -21,7 +23,7 @@ public class KdbxDatabase {
 	private List<KdbxEntry> entries = new ArrayList<>();
 	private final Map<KdbxUUID, ZonedDateTime> deletedObjects = new LinkedHashMap<>();
 
-	public KdbxDatabase setDataFormatVersion(Version dataFormatVersion) {
+	public KdbxDatabase setDataFormatVersion(final Version dataFormatVersion) {
 		this.dataFormatVersion = dataFormatVersion;
 		return this;
 	}
@@ -147,5 +149,22 @@ public class KdbxDatabase {
 			entriesList.addAll(group.getAllEntries());
 		}
 		return entriesList;
+	}
+
+	public void validate() throws Exception {
+		final Set<KdbxUUID> usedUuids = new HashSet<>();
+		for (final KdbxGroup group : getAllGroups()) {
+			if (!usedUuids.add(group.getUuid())) {
+				throw new Exception("Group with duplicate UUID found: " + group.getUuid().toHex());
+			}
+		}
+		for (final KdbxEntry entry : getAllEntries()) {
+			if (!usedUuids.add(entry.getUuid())) {
+				throw new Exception("Entry with duplicate UUID found: " + entry.getUuid().toHex());
+			}
+		}
+		// TODO: check IconIDs
+		// TODO: check ids for binary attachments
+		// TODO: The same binary attachment should not be stored multiple times
 	}
 }

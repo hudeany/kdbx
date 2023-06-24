@@ -16,6 +16,8 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
@@ -374,6 +376,12 @@ public class Utilities {
 		return document;
 	}
 
+	public static Node appendNode(final Document document, final String tagName) {
+		final Node newNode = document.createElement(tagName);
+		document.appendChild(newNode);
+		return newNode;
+	}
+
 	public static Node appendNode(final Node baseNode, final String tagName) {
 		final Node newNode = baseNode.getOwnerDocument().createElement(tagName);
 		baseNode.appendChild(newNode);
@@ -382,11 +390,27 @@ public class Utilities {
 
 	public static Node appendTextValueNode(final Node baseNode, final String tagName, final String tagValue) {
 		final Node newNode = appendNode(baseNode, tagName);
-		if (tagValue == null) {
-			newNode.appendChild(baseNode.getOwnerDocument().createTextNode("<null>"));
-		} else {
+		if (tagValue != null) {
 			newNode.appendChild(baseNode.getOwnerDocument().createTextNode(tagValue));
 		}
 		return newNode;
+	}
+
+	public static byte[] gzip(final byte[] data) throws Exception {
+		final ByteArrayOutputStream bufferStream = new ByteArrayOutputStream();
+		try (final GZIPOutputStream gzipOut = new GZIPOutputStream(bufferStream)) {
+			gzipOut.write(data);
+			return bufferStream.toByteArray();
+		} catch (final IOException e) {
+			throw new Exception("GZIP compression failed", e);
+		}
+	}
+
+	public static byte[] gunzip(final byte[] compressedData) throws Exception {
+		try (final GZIPInputStream gzipIn = new GZIPInputStream(new ByteArrayInputStream(compressedData))) {
+			return Utilities.toByteArray(gzipIn);
+		} catch (final IOException e) {
+			throw new Exception("GZIP decompression failed", e);
+		}
 	}
 }

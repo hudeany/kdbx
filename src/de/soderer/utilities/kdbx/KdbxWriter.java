@@ -1,6 +1,9 @@
 package de.soderer.utilities.kdbx;
 
+import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -12,9 +15,19 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.TransformerFactoryConfigurationError;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
+import de.soderer.utilities.kdbx.data.KdbxBinary;
 import de.soderer.utilities.kdbx.data.KdbxCustomDataItem;
 import de.soderer.utilities.kdbx.data.KdbxEntry;
 import de.soderer.utilities.kdbx.data.KdbxEntryBinary;
@@ -52,59 +65,158 @@ public class KdbxWriter implements AutoCloseable {
 	}
 
 	public void writeKdbxDatabase(final KdbxDatabase database, final Version dataFormatVersionToStore, final KdbxCredentials credentials) throws Exception {
-		validateDatabase(database, dataFormatVersionToStore);
+		database.validate();
+
+		final Set<String> keyNamesToEncrypt = new HashSet<>();
+		final KdbxMemoryProtection memoryProtection = database.getMeta().getMemoryProtection();
+		if (memoryProtection.isProtectTitle()) {
+			keyNamesToEncrypt.add("Title");
+		}
+		if (memoryProtection.isProtectUserName()) {
+			keyNamesToEncrypt.add("UserName");
+		}
+		if (memoryProtection.isProtectPassword()) {
+			keyNamesToEncrypt.add("Password");
+		}
+		if (memoryProtection.isProtectURL()) {
+			keyNamesToEncrypt.add("URL");
+		}
+		if (memoryProtection.isProtectNotes()) {
+			keyNamesToEncrypt.add("Notes");
+		}
+		keyNamesToEncrypt.add("KPRPC JSON");
+
 		final Document document = Utilities.createNewDocument();
-		final Node xmlDocumentRootNode = Utilities.appendNode(document, "KeePass");
-		writeMetaNode(dataFormatVersionToStore, xmlDocumentRootNode, database.getMeta());
-		writeRootNode(dataFormatVersionToStore, xmlDocumentRootNode, database);
-	}
+		final Node xmlDocumentRootNode = Utilities.appendNode(document, "KeePassFile");
+		final Node metaNode = writeMetaNode(dataFormatVersionToStore, xmlDocumentRootNode, database.getMeta());
+		writeRootNode(keyNamesToEncrypt, dataFormatVersionToStore, xmlDocumentRootNode, database);
 
-	private void validateDatabase(final KdbxDatabase database, final Version version) throws Exception {
-		final Set<KdbxUUID> usedUuids = new HashSet<>();
-		for (final KdbxGroup group : database.getAllGroups()) {
-			if (!usedUuids.add(group.getUuid())) {
-				throw new Exception("Group with duplicate UUID found: " + group.getUuid().toHex());
-			}
+		if (dataFormatVersionToStore.getMajorVersionNumber() < 4) {
+			writeBinariesToMeta(metaNode, database.getBinaryAttachments());
 		}
-		for (final KdbxEntry entry : database.getAllEntries()) {
-			if (!usedUuids.add(entry.getUuid())) {
-				throw new Exception("Entry with duplicate UUID found: " + entry.getUuid().toHex());
-			}
-		}
-		// TODO: check IconIDs
-		// TODO: check binary attachments
-	}
 
-	private void writeMetaNode(final Version dataFormatVersion, final Node xmlDocumentRootNode, final KdbxMeta meta) {
-		final Node metaNode = Utilities.appendNode(xmlDocumentRootNode, "Meta");
-		Utilities.appendTextValueNode(metaNode, "Generator", meta.getGenerator());
-		Utilities.appendTextValueNode(metaNode, "HeaderHash", meta.getHeaderHash());
-		Utilities.appendTextValueNode(metaNode, "SettingsChanged", formatDateTimeValue(dataFormatVersion, meta.getSettingsChanged()));
-		Utilities.appendTextValueNode(metaNode, "DatabaseName", meta.getDatabaseName());
-		Utilities.appendTextValueNode(metaNode, "DatabaseNameChanged", formatDateTimeValue(dataFormatVersion, meta.getDatabaseNameChanged()));
-		Utilities.appendTextValueNode(metaNode, "DatabaseDescription", meta.getDatabaseDescription());
-		Utilities.appendTextValueNode(metaNode, "DatabaseDescriptionChanged", formatDateTimeValue(dataFormatVersion, meta.getDatabaseDescriptionChanged()));
-		Utilities.appendTextValueNode(metaNode, "DefaultUserName", meta.getDefaultUserName());
-		Utilities.appendTextValueNode(metaNode, "DefaultUserNameChanged", formatDateTimeValue(dataFormatVersion, meta.getDefaultUserNameChanged()));
-		Utilities.appendTextValueNode(metaNode, "MaintenanceHistoryDays", formatIntegerValue(meta.getMaintenanceHistoryDays()));
-		Utilities.appendTextValueNode(metaNode, "Color", meta.getColor());
-		Utilities.appendTextValueNode(metaNode, "MasterKeyChanged", formatDateTimeValue(dataFormatVersion, meta.getMasterKeyChanged()));
-		Utilities.appendTextValueNode(metaNode, "MasterKeyChangeRec", formatIntegerValue(meta.getMasterKeyChangeRec()));
-		Utilities.appendTextValueNode(metaNode, "MasterKeyChangeForce", formatIntegerValue(meta.getMasterKeyChangeForce()));
-		Utilities.appendTextValueNode(metaNode, "RecycleBinEnabled", formatBooleanValue(meta.isRecycleBinEnabled()));
-		Utilities.appendTextValueNode(metaNode, "RecycleBinUUID", formatKdbxUUIDValue(meta.getRecycleBinUUID()));
-		Utilities.appendTextValueNode(metaNode, "RecycleBinChanged", formatDateTimeValue(dataFormatVersion, meta.getRecycleBinChanged()));
-		Utilities.appendTextValueNode(metaNode, "EntryTemplatesGroup", formatKdbxUUIDValue(meta.getEntryTemplatesGroup()));
-		Utilities.appendTextValueNode(metaNode, "EntryTemplatesGroupChanged", formatDateTimeValue(dataFormatVersion, meta.getEntryTemplatesGroupChanged()));
-		Utilities.appendTextValueNode(metaNode, "HistoryMaxItems", formatIntegerValue(meta.getHistoryMaxItems()));
-		Utilities.appendTextValueNode(metaNode, "HistoryMaxSize", formatIntegerValue(meta.getHistoryMaxSize()));
-		Utilities.appendTextValueNode(metaNode, "LastSelectedGroup", formatKdbxUUIDValue(meta.getLastSelectedGroup()));
-		Utilities.appendTextValueNode(metaNode, "LastTopVisibleGroup", formatKdbxUUIDValue(meta.getLastTopVisibleGroup()));
+		System.out.println(new String(convertXML2ByteArray(document, StandardCharsets.UTF_8)));
+
 		// TODO
-		//		Utilities.appendTextValueNode(metaNode, "Binaries", meta.getBinaries());
+		//if (dataFormatVersion.getMajorVersionNumber() < 4) {
+		// writeBinariesToInnerHeaders
+
+		//TODO write out header and data
+	}
+
+	public static byte[] convertXML2ByteArray(final Node pDocument, final Charset encoding) throws Exception {
+		TransformerFactory transformerFactory = null;
+		Transformer transformer = null;
+		DOMSource domSource = null;
+		StreamResult result = null;
+
+		try {
+			transformerFactory = TransformerFactory.newInstance();
+			if (transformerFactory == null) {
+				throw new Exception("TransformerFactory error");
+			}
+
+			transformer = transformerFactory.newTransformer();
+			if (transformer == null) {
+				throw new Exception("Transformer error");
+			}
+
+			if (encoding != null) {
+				transformer.setOutputProperty(OutputKeys.ENCODING, encoding.name());
+			} else {
+				transformer.setOutputProperty(OutputKeys.ENCODING, StandardCharsets.UTF_8.name());
+			}
+
+			domSource = new DOMSource(pDocument);
+			try (final ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+				result = new StreamResult(outputStream);
+
+				transformer.transform(domSource, result);
+
+				return outputStream.toByteArray();
+			}
+		} catch (final TransformerFactoryConfigurationError e) {
+			throw new Exception("TransformerFactoryConfigurationError", e);
+		} catch (final TransformerConfigurationException e) {
+			throw new Exception("TransformerConfigurationException", e);
+		} catch (final TransformerException e) {
+			throw new Exception("TransformerException", e);
+		}
+	}
+
+	private Node writeMetaNode(final Version dataFormatVersion, final Node xmlDocumentRootNode, final KdbxMeta meta) {
+		final Node metaNode = Utilities.appendNode(xmlDocumentRootNode, "Meta");
+		if (meta.getGenerator() != null) {
+			Utilities.appendTextValueNode(metaNode, "Generator", meta.getGenerator());
+		}
+		if (meta.getHeaderHash() != null) {
+			Utilities.appendTextValueNode(metaNode, "HeaderHash", meta.getHeaderHash());
+		}
+		if (meta.getSettingsChanged() != null) {
+			Utilities.appendTextValueNode(metaNode, "SettingsChanged", formatDateTimeValue(dataFormatVersion, meta.getSettingsChanged()));
+		}
+		if (meta.getDatabaseName() != null) {
+			Utilities.appendTextValueNode(metaNode, "DatabaseName", meta.getDatabaseName());
+		}
+		if (meta.getDatabaseNameChanged() != null) {
+			Utilities.appendTextValueNode(metaNode, "DatabaseNameChanged", formatDateTimeValue(dataFormatVersion, meta.getDatabaseNameChanged()));
+		}
+		if (meta.getDatabaseDescription() != null) {
+			Utilities.appendTextValueNode(metaNode, "DatabaseDescription", meta.getDatabaseDescription());
+		}
+		if (meta.getDatabaseDescriptionChanged() != null) {
+			Utilities.appendTextValueNode(metaNode, "DatabaseDescriptionChanged", formatDateTimeValue(dataFormatVersion, meta.getDatabaseDescriptionChanged()));
+		}
+		if (meta.getDefaultUserName() != null) {
+			Utilities.appendTextValueNode(metaNode, "DefaultUserName", meta.getDefaultUserName());
+		}
+		if (meta.getDefaultUserNameChanged() != null) {
+			Utilities.appendTextValueNode(metaNode, "DefaultUserNameChanged", formatDateTimeValue(dataFormatVersion, meta.getDefaultUserNameChanged()));
+		}
+		if (meta.getMaintenanceHistoryDays() > -1) {
+			Utilities.appendTextValueNode(metaNode, "MaintenanceHistoryDays", formatIntegerValue(meta.getMaintenanceHistoryDays()));
+		}
+		if (meta.getColor() != null) {
+			Utilities.appendTextValueNode(metaNode, "Color", meta.getColor());
+		}
+		if (meta.getMasterKeyChanged() != null) {
+			Utilities.appendTextValueNode(metaNode, "MasterKeyChanged", formatDateTimeValue(dataFormatVersion, meta.getMasterKeyChanged()));
+		}
+		if (meta.getMasterKeyChangeRec() > -1) {
+			Utilities.appendTextValueNode(metaNode, "MasterKeyChangeRec", formatIntegerValue(meta.getMasterKeyChangeRec()));
+		}
+		if (meta.getMasterKeyChangeForce() > -1) {
+			Utilities.appendTextValueNode(metaNode, "MasterKeyChangeForce", formatIntegerValue(meta.getMasterKeyChangeForce()));
+		}
+		Utilities.appendTextValueNode(metaNode, "RecycleBinEnabled", formatBooleanValue(meta.isRecycleBinEnabled()));
+		if (meta.getRecycleBinUUID() != null) {
+			Utilities.appendTextValueNode(metaNode, "RecycleBinUUID", formatKdbxUUIDValue(meta.getRecycleBinUUID()));
+		}
+		if (meta.getRecycleBinChanged() != null) {
+			Utilities.appendTextValueNode(metaNode, "RecycleBinChanged", formatDateTimeValue(dataFormatVersion, meta.getRecycleBinChanged()));
+		}
+		if (meta.getEntryTemplatesGroup() != null) {
+			Utilities.appendTextValueNode(metaNode, "EntryTemplatesGroup", formatKdbxUUIDValue(meta.getEntryTemplatesGroup()));
+		}
+		if (meta.getEntryTemplatesGroupChanged() != null) {
+			Utilities.appendTextValueNode(metaNode, "EntryTemplatesGroupChanged", formatDateTimeValue(dataFormatVersion, meta.getEntryTemplatesGroupChanged()));
+		}
+		if (meta.getHistoryMaxItems() > -1) {
+			Utilities.appendTextValueNode(metaNode, "HistoryMaxItems", formatIntegerValue(meta.getHistoryMaxItems()));
+		}
+		if (meta.getHistoryMaxSize() > -1) {
+			Utilities.appendTextValueNode(metaNode, "HistoryMaxSize", formatIntegerValue(meta.getHistoryMaxSize()));
+		}
+		if (meta.getLastSelectedGroup() != null) {
+			Utilities.appendTextValueNode(metaNode, "LastSelectedGroup", formatKdbxUUIDValue(meta.getLastSelectedGroup()));
+		}
+		if (meta.getLastTopVisibleGroup() != null) {
+			Utilities.appendTextValueNode(metaNode, "LastTopVisibleGroup", formatKdbxUUIDValue(meta.getLastTopVisibleGroup()));
+		}
 		writeMemoryProtectionNode(metaNode, meta.getMemoryProtection());
-		writeCustomData(dataFormatVersion, metaNode, meta.getCustomData());
 		writeCustomIcons(metaNode, meta.getCustomIcons());
+		writeCustomData(dataFormatVersion, metaNode, meta.getCustomData());
+		return metaNode;
 	}
 
 	private void writeCustomIcons(final Node metaNode, final Map<KdbxUUID, byte[]> customIcons) {
@@ -125,17 +237,32 @@ public class KdbxWriter implements AutoCloseable {
 		Utilities.appendTextValueNode(memoryProtectionNode, "ProtectNotes", formatBooleanValue(memoryProtection.isProtectNotes()));
 	}
 
-	private void writeRootNode(final Version dataFormatVersion, final Node xmlDocumentRootNode, final KdbxDatabase database) {
+	private void writeRootNode(final Set<String> keyNamesToEncrypt, final Version dataFormatVersion, final Node xmlDocumentRootNode, final KdbxDatabase database) {
 		final Node rootNode = Utilities.appendNode(xmlDocumentRootNode, "Root");
 		for (final KdbxGroup group : database.getGroups()) {
-			writeGroupNode(dataFormatVersion, rootNode, group);
+			writeGroupNode(keyNamesToEncrypt, dataFormatVersion, rootNode, group);
 		}
 		for (final KdbxEntry entry : database.getEntries()) {
-			writeEntryNode(dataFormatVersion, rootNode, entry);
+			writeEntryNode(keyNamesToEncrypt, dataFormatVersion, rootNode, entry);
 		}
 	}
 
-	private void writeGroupNode(final Version dataFormatVersion, final Node baseNode, final KdbxGroup group) {
+	private void writeBinariesToMeta(final Node metaNode, final List<KdbxBinary> binaryAttachments) throws Exception {
+		final Node binariesNode = Utilities.appendNode(metaNode, "Binaries");
+		for (final KdbxBinary binaryAttachment : binaryAttachments) {
+			final Node binaryNode = Utilities.appendNode(binariesNode, "Binary");
+			Utilities.appendTextValueNode(binaryNode, "ID", formatIntegerValue(binaryAttachment.getId()));
+			Utilities.appendTextValueNode(binaryNode, "Compressed", formatBooleanValue(binaryAttachment.isCompressed()));
+			byte[] valueBytes = binaryAttachment.getData();
+			if (binaryAttachment.isCompressed()) {
+				valueBytes = Utilities.gzip(valueBytes);
+			}
+			final String valueString = Base64.getEncoder().encodeToString(valueBytes);
+			binaryNode.appendChild(binaryNode.getOwnerDocument().createTextNode(valueString));
+		}
+	}
+
+	private void writeGroupNode(final Set<String> keyNamesToEncrypt, final Version dataFormatVersion, final Node baseNode, final KdbxGroup group) {
 		final Node groupNode = Utilities.appendNode(baseNode, "Group");
 		Utilities.appendTextValueNode(groupNode, "UUID", formatKdbxUUIDValue(group.getUuid()));
 		Utilities.appendTextValueNode(groupNode, "Name", group.getName());
@@ -150,16 +277,20 @@ public class KdbxWriter implements AutoCloseable {
 		writeTimes(dataFormatVersion, groupNode, group.getTimes());
 
 		for (final KdbxGroup subGroup : group.getGroups()) {
-			writeGroupNode(dataFormatVersion, groupNode, subGroup);
+			writeGroupNode(keyNamesToEncrypt, dataFormatVersion, groupNode, subGroup);
 		}
 
 		for (final KdbxEntry entry : group.getEntries()) {
-			writeEntryNode(dataFormatVersion, groupNode, entry);
+			writeEntryNode(keyNamesToEncrypt, dataFormatVersion, groupNode, entry);
 		}
 
-		Utilities.appendTextValueNode(groupNode, "CustomIconUUID", formatKdbxUUIDValue(group.getCustomIconUuid()));
+		if (group.getCustomIconUuid() != null) {
+			Utilities.appendTextValueNode(groupNode, "CustomIconUUID", formatKdbxUUIDValue(group.getCustomIconUuid()));
+		}
 
-		writeCustomData(dataFormatVersion, groupNode, group.getCustomData());
+		if (group.getCustomData() != null) {
+			writeCustomData(dataFormatVersion, groupNode, group.getCustomData());
+		}
 	}
 
 	private void writeCustomData(final Version dataFormatVersion, final Node baseNode, final List<KdbxCustomDataItem> customData) {
@@ -172,7 +303,7 @@ public class KdbxWriter implements AutoCloseable {
 		}
 	}
 
-	private void writeEntryNode(final Version dataFormatVersion, final Node baseNode, final KdbxEntry entry) {
+	private void writeEntryNode(final Set<String> keyNamesToEncrypt, final Version dataFormatVersion, final Node baseNode, final KdbxEntry entry) {
 		final Node entryNode = Utilities.appendNode(baseNode, "Entry");
 		Utilities.appendTextValueNode(entryNode, "UUID", formatKdbxUUIDValue(entry.getUuid()));
 		Utilities.appendTextValueNode(entryNode, "IconID", formatIntegerValue(entry.getIconID()));
@@ -186,8 +317,12 @@ public class KdbxWriter implements AutoCloseable {
 		for (final Entry<String, Object> itemEntry : entry.getItems().entrySet()) {
 			final Node itemNode = Utilities.appendNode(entryNode, "String");
 			Utilities.appendTextValueNode(itemNode, "Key", itemEntry.getKey());
-			Utilities.appendTextValueNode(itemNode, "Value", (String) itemEntry.getValue());
-			// TODO encrypt
+			String value = (String) itemEntry.getValue();
+			if (keyNamesToEncrypt.contains(itemEntry.getKey())) {
+				// TODO encrypt
+				value = "to encrypt";
+			}
+			Utilities.appendTextValueNode(itemNode, "Value", value);
 		}
 
 		for (final KdbxEntryBinary entryBinary : entry.getBinaries()) {
@@ -205,15 +340,19 @@ public class KdbxWriter implements AutoCloseable {
 		final Node historyNode = Utilities.appendNode(entryNode, "History");
 		Utilities.appendTextValueNode(historyNode, "Entry", formatBooleanValue(entry.isAutoTypeEnabled()));
 
-		Utilities.appendTextValueNode(entryNode, "CustomIconUUID", formatKdbxUUIDValue(entry.getCustomIconUuid()));
+		if (entry.getCustomIconUuid() != null) {
+			Utilities.appendTextValueNode(entryNode, "CustomIconUUID", formatKdbxUUIDValue(entry.getCustomIconUuid()));
+		}
 
-		writeCustomData(dataFormatVersion, entryNode, entry.getCustomData());
+		if (entry.getCustomData() != null) {
+			writeCustomData(dataFormatVersion, entryNode, entry.getCustomData());
+		}
 	}
 
 	private void writeTimes(final Version dataFormatVersion, final Node baseNode, final KdbxTimes times) {
 		final Node timesNode = Utilities.appendNode(baseNode, "Times");
-		Utilities.appendTextValueNode(timesNode, "CreationTime", formatDateTimeValue(dataFormatVersion, times.getCreationTime()));
 		Utilities.appendTextValueNode(timesNode, "LastModificationTime", formatDateTimeValue(dataFormatVersion, times.getLastModificationTime()));
+		Utilities.appendTextValueNode(timesNode, "CreationTime", formatDateTimeValue(dataFormatVersion, times.getCreationTime()));
 		Utilities.appendTextValueNode(timesNode, "LastAccessTime", formatDateTimeValue(dataFormatVersion, times.getLastAccessTime()));
 		Utilities.appendTextValueNode(timesNode, "ExpiryTime", formatDateTimeValue(dataFormatVersion, times.getExpiryTime()));
 		Utilities.appendTextValueNode(timesNode, "Expires", formatBooleanValue(times.isExpires()));

@@ -1,9 +1,9 @@
 package de.soderer.utilities.kdbx.data;
 
 public class KdbxBinary {
-	public int id;
-	public boolean compressed;
-	public byte[] data;
+	private int id;
+	private boolean compressed;
+	private byte[] data;
 
 	/**
 	 * Unique id of this binary

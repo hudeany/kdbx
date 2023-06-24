@@ -243,11 +243,7 @@ public class KdbxReader implements AutoCloseable {
 
 		decryptedPayload = payloadData.toByteArray();
 		if (streamIsCompressed) {
-			try (final GZIPInputStream gzipIn = new GZIPInputStream(new ByteArrayInputStream(decryptedPayload))) {
-				decryptedPayload = Utilities.toByteArray(gzipIn);
-			} catch (final IOException e) {
-				throw new Exception("GZIP decompression failed", e);
-			}
+			decryptedPayload = Utilities.gunzip(decryptedPayload);
 		}
 		return decryptedPayload;
 	}
