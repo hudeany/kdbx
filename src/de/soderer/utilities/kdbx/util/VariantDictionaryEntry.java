@@ -13,8 +13,16 @@ public class VariantDictionaryEntry {
 		STRING(0x18, String.class), // UTF-8 String
 		BYTE_ARRAY(0x42, byte[].class);
 
-		public final int id;
-		public final Class<?> javaType;
+		private final int id;
+		private final Class<?> javaType;
+
+		public int getId() {
+			return id;
+		}
+
+		public Class<?> getJavaType() {
+			return javaType;
+		}
 
 		Type(final int id, final Class<?> javaType) {
 			this.id = id;
@@ -85,8 +93,16 @@ public class VariantDictionaryEntry {
 		}
 	}
 
-	public Type type;
-	public byte[] value;
+	private final Type type;
+	private byte[] value;
+
+	public Type getType() {
+		return type;
+	}
+
+	public byte[] getValue() {
+		return value;
+	}
 
 	public VariantDictionaryEntry(final Type type, final byte[] value) {
 		this.type = type;

@@ -25,7 +25,9 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -287,6 +289,18 @@ public class Utilities {
 		return result;
 	}
 
+	public static short readShortFromLittleEndianBytes(final byte[] dataBytes) {
+		if (dataBytes == null || dataBytes.length != 2) {
+			throw new RuntimeException("Invalid data bytes for short value: 2 bytes expected");
+		} else {
+			return ByteBuffer.wrap(dataBytes).order(ByteOrder.LITTLE_ENDIAN).getShort();
+		}
+	}
+
+	public static byte[] getLittleEndianBytes(final short value) {
+		return ByteBuffer.allocate(2).order(ByteOrder.LITTLE_ENDIAN).putShort(value).array();
+	}
+
 	public static int readIntFromLittleEndianBytes(final byte[] dataBytes) {
 		if (dataBytes == null || dataBytes.length != 4) {
 			throw new RuntimeException("Invalid data bytes for int value: 4 bytes expected");
@@ -394,6 +408,14 @@ public class Utilities {
 			newNode.appendChild(baseNode.getOwnerDocument().createTextNode(tagValue));
 		}
 		return newNode;
+	}
+
+	public static void appendAttribute(final Element baseNode, final String attributeName, final String attributeValue) {
+		final Attr typeAttribute = baseNode.getOwnerDocument().createAttribute(attributeName);
+		if (attributeValue != null) {
+			typeAttribute.setNodeValue(attributeValue);
+		}
+		baseNode.setAttributeNode(typeAttribute);
 	}
 
 	public static byte[] gzip(final byte[] data) throws Exception {

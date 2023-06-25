@@ -2,6 +2,7 @@ package de.soderer.utilities.kdbx.util;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -28,14 +29,28 @@ public class VariantDictionary extends HashMap<String, VariantDictionaryEntry> {
 	public static final String KDF_ARGON2_ITERATIONS = "I";
 	public static final String KDF_ARGON2_VERSION = "V";
 
-	public VariantDictionary() {
-		// do nothing
-	}
-
 	public void put(final String key, final VariantDictionaryEntry.Type type, final Object value) {
 		final VariantDictionaryEntry entry = new VariantDictionaryEntry(type, new byte[0]);
 		entry.setJavaValue(value);
 		super.put(key, entry);
+	}
+
+	public void write(final OutputStream outputStream) throws Exception {
+		outputStream.write(VERSION);
+
+		for (final Entry<String, VariantDictionaryEntry> entry : entrySet()) {
+			outputStream.write(entry.getValue().getType().getId());
+
+			final byte[] keyBytes = entry.getKey().getBytes(StandardCharsets.UTF_8);
+			outputStream.write(Utilities.getLittleEndianBytes(keyBytes.length));
+			outputStream.write(keyBytes);
+
+			final byte[] dataBytes = entry.getValue().getValue();
+			outputStream.write(Utilities.getLittleEndianBytes(dataBytes.length));
+			outputStream.write(dataBytes);
+		}
+
+		outputStream.write(VariantDictionaryEntry.Type.END.getId());
 	}
 
 	public static VariantDictionary read(final InputStream inputStream) throws Exception {

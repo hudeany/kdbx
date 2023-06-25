@@ -130,7 +130,7 @@ public class KdbxReader implements AutoCloseable {
 
 			final Map<KdbxOuterHeaderType, byte[]> outerHeaders = new HashMap<>();
 			TypeLengthValueStructure nextStructure;
-			while ((nextStructure = TypeLengthValueStructure.read(copyInputStream, dataFormatVersion.getMajorVersionNumber() == 4)).getTypeId() != KdbxOuterHeaderType.END_OF_HEADER.getId()) {
+			while ((nextStructure = TypeLengthValueStructure.read(copyInputStream, dataFormatVersion.getMajorVersionNumber() >= 4)).getTypeId() != KdbxOuterHeaderType.END_OF_HEADER.getId()) {
 				outerHeaders.put(KdbxOuterHeaderType.getById(nextStructure.getTypeId()), nextStructure.getData());
 			}
 
@@ -141,7 +141,7 @@ public class KdbxReader implements AutoCloseable {
 			List<KdbxBinary> binaryAttachments = null;
 			if (dataFormatVersion.getMajorVersionNumber() == 3) {
 				decryptedXmlPayloadData = decryptVersion3(credentials, outerHeaders);
-			} else if (dataFormatVersion.getMajorVersionNumber() == 4) {
+			} else if (dataFormatVersion.getMajorVersionNumber() >= 4) {
 				binaryAttachments = new ArrayList<>();
 				decryptedXmlPayloadData = decryptVersion4(credentials, outerHeaders, outerHeadersDataBytes, binaryAttachments);
 			} else {
