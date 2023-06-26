@@ -374,7 +374,6 @@ public class KdbxReader implements AutoCloseable {
 		innerEncryptionCipher = createInnerEncryptionCipher(innerEncryptionAlgorithm, innerEncryptionKeyBytes);
 
 		decryptedPayload = Utilities.toByteArray(inputStream);
-		System.out.println(new String(decryptedPayload));
 		return decryptedPayload;
 	}
 

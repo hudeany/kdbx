@@ -220,7 +220,7 @@ public class KdbxWriter implements AutoCloseable {
 		if (!outerHeaders.containsKey(KdbxOuterHeaderType.KDF_PARAMETERS)) {
 			final VariantDictionary variantDictionary = new VariantDictionary();
 			variantDictionary.put(VariantDictionary.KDF_UUID, VariantDictionaryEntry.Type.BYTE_ARRAY, KeyDerivationFunction.ARGON2D.getId());
-			variantDictionary.put(VariantDictionary.KDF_ARGON2_ITERATIONS, VariantDictionaryEntry.Type.INT_64, (long) 2);
+			variantDictionary.put(VariantDictionary.KDF_ARGON2_ITERATIONS, VariantDictionaryEntry.Type.UINT_64, (long) 2);
 			variantDictionary.put(VariantDictionary.KDF_ARGON2_PARALLELISM, VariantDictionaryEntry.Type.UINT_32, 2);
 			variantDictionary.put(VariantDictionary.KDF_ARGON2_MEMORY_IN_BYTES, VariantDictionaryEntry.Type.UINT_64, (long) 4 * 1024);
 			final byte[] saltBytes = new byte[32];
@@ -230,6 +230,16 @@ public class KdbxWriter implements AutoCloseable {
 			final ByteArrayOutputStream bufferStream = new ByteArrayOutputStream();
 			variantDictionary.write(bufferStream);
 			outerHeaders.put(KdbxOuterHeaderType.KDF_PARAMETERS, bufferStream.toByteArray());
+
+			//			final VariantDictionary variantDictionary = new VariantDictionary();
+			//			variantDictionary.put(VariantDictionary.KDF_UUID, VariantDictionaryEntry.Type.BYTE_ARRAY, KeyDerivationFunction.AES_KDBX3.getId());
+			//			variantDictionary.put(VariantDictionary.KDF_AES_ROUNDS, VariantDictionaryEntry.Type.UINT_64, (long) 8000);
+			//			final byte[] saltBytes = new byte[32];
+			//			new SecureRandom().nextBytes(saltBytes);
+			//			variantDictionary.put(VariantDictionary.KDF_AES_SEED, VariantDictionaryEntry.Type.BYTE_ARRAY, saltBytes);
+			//			final ByteArrayOutputStream bufferStream = new ByteArrayOutputStream();
+			//			variantDictionary.write(bufferStream);
+			//			outerHeaders.put(KdbxOuterHeaderType.KDF_PARAMETERS, bufferStream.toByteArray());
 		}
 		if (!outerHeaders.containsKey(KdbxOuterHeaderType.ENCRYPTION_IV)) {
 			final byte[] initialVectorBytes = new byte[16];
