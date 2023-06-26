@@ -284,7 +284,7 @@ public class KdbxReader implements AutoCloseable {
 		}
 		final byte[] actualSha256 = MessageDigest.getInstance("SHA-256").digest(outerHeadersDataBytes);
 		if (!Arrays.equals(actualSha256, expectedSha256)) {
-			throw new RuntimeException("Outer header data corrupted, SHA-256 hashes do not match");
+			throw new Exception("Outer header data corrupted, SHA-256 hashes do not match");
 		}
 
 		final byte[] transformedKey = Utilities.concatArrays(masterSeed, decryptionKey);
@@ -300,7 +300,7 @@ public class KdbxReader implements AutoCloseable {
 		// HMAC-SHA-256 verification of headerBytes
 		final byte[] expectedHeaderHMAC = new byte[32];
 		final int readBytesExpectedHeaderHMAC = inputStream.read(expectedHeaderHMAC);
-		if (readBytesExpectedHeaderHMAC != expectedSha256.length) {
+		if (readBytesExpectedHeaderHMAC != expectedHeaderHMAC.length) {
 			throw new IllegalStateException("Cannot read HMAC code bytes");
 		}
 		final byte[] indexBytes = Utilities.getLittleEndianBytes(0xFFFFFFFF_FFFFFFFFL);
@@ -313,7 +313,8 @@ public class KdbxReader implements AutoCloseable {
 		sha256_HMAC.update(outerHeadersDataBytes, 0, outerHeadersDataBytes.length);
 		final byte[] actualHeaderHMAC = sha256_HMAC.doFinal();
 		if (!Arrays.equals(actualHeaderHMAC, expectedHeaderHMAC)) {
-			throw new RuntimeException("Outer header data corrupted, MAC-SHA-256 hashes do not match: Maybe the credentials for this database are wrong?");
+			// When SHA-256 checksum was valid, then this means, that the credentials for decryption are wrong.
+			throw new Exception("Outer header data corrupted, MAC-SHA-256 hashes do not match: Maybe the credentials for this database are wrong?");
 		}
 
 		inputStream = new HmacInputStream(inputStream, hmacKey);
@@ -373,6 +374,7 @@ public class KdbxReader implements AutoCloseable {
 		innerEncryptionCipher = createInnerEncryptionCipher(innerEncryptionAlgorithm, innerEncryptionKeyBytes);
 
 		decryptedPayload = Utilities.toByteArray(inputStream);
+		System.out.println(new String(decryptedPayload));
 		return decryptedPayload;
 	}
 
@@ -432,9 +434,9 @@ public class KdbxReader implements AutoCloseable {
 					return innerEncryptionCipher;
 				}
 			case ARC4_VARIANT:
-				throw new RuntimeException("Unsupported algorithm ARC4_VARIANT");
+				throw new Exception("Unsupported algorithm ARC4_VARIANT");
 			case NONE:
-				throw new RuntimeException("Undefined algorithm");
+				throw new Exception("Undefined algorithm");
 			default:
 				// no inner encryption
 				return null;
