@@ -1,6 +1,7 @@
 package de.soderer.utilities.kdbx.util;
 
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.security.MessageDigest;
 import java.util.Arrays;
 
@@ -25,6 +26,20 @@ public class TypeHashLengthValueStructure {
 		this.typeId = typeId;
 		this.hash = hash;
 		this.data = data;
+	}
+
+	public static void write(final OutputStream outputStream, final int typeId, final byte[] data, final String digestName) throws Exception {
+		final MessageDigest digest = MessageDigest.getInstance(digestName);
+
+		outputStream.write(Utilities.getLittleEndianBytes(typeId));
+		if (data != null) {
+			outputStream.write(digest.digest(data));
+			outputStream.write(Utilities.getLittleEndianBytes(data.length));
+			outputStream.write(data);
+		} else {
+			outputStream.write(new byte[digest.getDigestLength()]);
+			outputStream.write(Utilities.getLittleEndianBytes(0));
+		}
 	}
 
 	public static TypeHashLengthValueStructure read(final InputStream inputStream, final String digestName) throws Exception {

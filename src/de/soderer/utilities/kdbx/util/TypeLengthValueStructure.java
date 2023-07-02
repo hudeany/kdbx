@@ -35,6 +35,7 @@ public class TypeLengthValueStructure {
 
 	public static TypeLengthValueStructure read(final InputStream inputStream, final boolean useIntLength) throws Exception {
 		final int typeId = inputStream.read();
+
 		int length;
 		if (useIntLength) {
 			length = Utilities.readLittleEndianIntFromStream(inputStream);
@@ -51,6 +52,7 @@ public class TypeLengthValueStructure {
 		} else {
 			data = new byte[0];
 		}
+
 		return new TypeLengthValueStructure(typeId, data);
 	}
 }

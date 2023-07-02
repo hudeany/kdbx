@@ -19,6 +19,8 @@ import javax.crypto.spec.SecretKeySpec;
  * Default KeyHashDigestName is SHA-512.<br />
  */
 public class HmacOutputStream extends OutputStream {
+	private static final int BLOCK_SIZE = 1024*1024;
+
 	private OutputStream baseOutputStream;
 	private byte[] key;
 
@@ -64,48 +66,57 @@ public class HmacOutputStream extends OutputStream {
 			bufferStream = new ByteArrayOutputStream();
 		}
 		bufferStream.write(b);
+		if (bufferStream.size() == BLOCK_SIZE) {
+			finalizeBlockByHmacChecksum();
+		}
 	}
 
 	public void finalizeBlockByHmacChecksum() throws IOException {
 		if (bufferStream != null) {
-			final byte[] blockData = bufferStream.toByteArray();
-
-			MessageDigest digest;
-			try {
-				digest = MessageDigest.getInstance(keyHashDigestName);
-			} catch (final NoSuchAlgorithmException e) {
-				throw new RuntimeException("Digest not available: " + keyHashDigestName, e);
-			}
-			digest.update(ByteBuffer.allocate(8).order(byteOrder).putLong(hmacBlockIndex).array());
-			final byte[] hmacBlockKey = digest.digest(key);
-
-			Mac hmac;
-			try {
-				hmac = Mac.getInstance(hmacAlgorithmName);
-				hmac.init(new SecretKeySpec(hmacBlockKey, hmacAlgorithmName));
-			} catch (final InvalidKeyException e) {
-				throw new RuntimeException("Invalid key for digest: " + hmacAlgorithmName, e);
-			} catch (final NoSuchAlgorithmException e) {
-				throw new RuntimeException("Hmac algorithm not available: " + hmacAlgorithmName, e);
-			}
-
-			hmac.update(ByteBuffer.allocate(8).order(byteOrder).putLong(hmacBlockIndex).array());
-			final byte[] blockLengthBytes = ByteBuffer.allocate(4).order(byteOrder).putInt(blockData.length).array();
-			hmac.update(blockLengthBytes);
-			hmac.update(blockData, 0, blockData.length);
-			final byte[] blockHmacBytes = hmac.doFinal();
-			baseOutputStream.write(blockHmacBytes);
-			baseOutputStream.write(blockLengthBytes);
-			baseOutputStream.write(blockData);
-
+			writeHmacBlock(bufferStream.toByteArray());
 			bufferStream = null;
 		}
+	}
+
+	private void writeHmacBlock(final byte[] blockData) throws IOException {
+		MessageDigest digest;
+		try {
+			digest = MessageDigest.getInstance(keyHashDigestName);
+		} catch (final NoSuchAlgorithmException e) {
+			throw new RuntimeException("Digest not available: " + keyHashDigestName, e);
+		}
+		digest.update(ByteBuffer.allocate(8).order(byteOrder).putLong(hmacBlockIndex).array());
+		final byte[] hmacBlockKey = digest.digest(key);
+
+		Mac hmac;
+		try {
+			hmac = Mac.getInstance(hmacAlgorithmName);
+			hmac.init(new SecretKeySpec(hmacBlockKey, hmacAlgorithmName));
+		} catch (final InvalidKeyException e) {
+			throw new RuntimeException("Invalid key for digest: " + hmacAlgorithmName, e);
+		} catch (final NoSuchAlgorithmException e) {
+			throw new RuntimeException("Hmac algorithm not available: " + hmacAlgorithmName, e);
+		}
+
+		hmac.update(ByteBuffer.allocate(8).order(byteOrder).putLong(hmacBlockIndex).array());
+		final byte[] blockLengthBytes = ByteBuffer.allocate(4).order(byteOrder).putInt(blockData.length).array();
+		hmac.update(blockLengthBytes);
+		hmac.update(blockData, 0, blockData.length);
+		final byte[] blockHmacBytes = hmac.doFinal();
+		baseOutputStream.write(blockHmacBytes);
+		baseOutputStream.write(blockLengthBytes);
+		baseOutputStream.write(blockData);
+
+		hmacBlockIndex++;
 	}
 
 	@Override
 	public void close() throws IOException {
 		if (baseOutputStream != null) {
 			finalizeBlockByHmacChecksum();
+
+			// write final empty block to signal proper data end
+			writeHmacBlock(new byte[0]);
 
 			try {
 				baseOutputStream.close();

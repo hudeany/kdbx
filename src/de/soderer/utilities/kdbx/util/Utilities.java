@@ -214,6 +214,20 @@ public class Utilities {
 		return buffer.toString();
 	}
 
+	public static String toByteString(final byte[] data, final String separator) {
+		if (data == null || data.length == 0) {
+			return "<empty>";
+		}
+		final StringBuilder buffer = new StringBuilder();
+		for (int i = 0; i < data.length; i++) {
+			buffer.append(data[i]);
+			if ((i + 1) < data.length) {
+				buffer.append(separator);
+			}
+		}
+		return buffer.toString();
+	}
+
 	public static int readLittleEndianIntFromStream(final InputStream inputStream) throws IOException, Exception {
 		final byte[] byteBuffer = new byte[4];
 		final int readBytes = inputStream.read(byteBuffer);
@@ -422,10 +436,10 @@ public class Utilities {
 		final ByteArrayOutputStream bufferStream = new ByteArrayOutputStream();
 		try (final GZIPOutputStream gzipOut = new GZIPOutputStream(bufferStream)) {
 			gzipOut.write(data);
-			return bufferStream.toByteArray();
 		} catch (final IOException e) {
 			throw new Exception("GZIP compression failed", e);
 		}
+		return bufferStream.toByteArray();
 	}
 
 	public static byte[] gunzip(final byte[] compressedData) throws Exception {

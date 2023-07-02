@@ -12,24 +12,24 @@ import de.soderer.utilities.kdbx.data.KdbxBinary;
 import de.soderer.utilities.kdbx.data.KdbxEntry;
 import de.soderer.utilities.kdbx.data.KdbxGroup;
 import de.soderer.utilities.kdbx.data.KdbxMeta;
+import de.soderer.utilities.kdbx.data.KdbxStorageSettings;
 import de.soderer.utilities.kdbx.data.KdbxUUID;
-import de.soderer.utilities.kdbx.util.Version;
 
 public class KdbxDatabase {
-	private Version dataFormatVersion;
+	private KdbxStorageSettings storageSettings;
 	private List<KdbxBinary> binaryAttachments = null;
 	private KdbxMeta meta = new KdbxMeta();
 	private List<KdbxGroup> groups = new ArrayList<>();
 	private List<KdbxEntry> entries = new ArrayList<>();
 	private final Map<KdbxUUID, ZonedDateTime> deletedObjects = new LinkedHashMap<>();
 
-	public KdbxDatabase setDataFormatVersion(final Version dataFormatVersion) {
-		this.dataFormatVersion = dataFormatVersion;
+	public KdbxDatabase setStorageSettings(final KdbxStorageSettings storageSettings) {
+		this.storageSettings = storageSettings;
 		return this;
 	}
 
-	public Version getDataFormatVersion() {
-		return dataFormatVersion;
+	public KdbxStorageSettings getStorageSettings() {
+		return storageSettings;
 	}
 
 	/**

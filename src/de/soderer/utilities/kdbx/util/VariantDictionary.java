@@ -5,9 +5,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map.Entry;
 
-public class VariantDictionary extends HashMap<String, VariantDictionaryEntry> {
+public class VariantDictionary extends LinkedHashMap<String, VariantDictionaryEntry> {
 	private static final long serialVersionUID = 267135612072510235L;
 
 	/**

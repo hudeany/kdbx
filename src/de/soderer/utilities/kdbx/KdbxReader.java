@@ -14,7 +14,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +54,8 @@ import de.soderer.utilities.kdbx.data.KdbxEntryBinary;
 import de.soderer.utilities.kdbx.data.KdbxGroup;
 import de.soderer.utilities.kdbx.data.KdbxMemoryProtection;
 import de.soderer.utilities.kdbx.data.KdbxMeta;
+import de.soderer.utilities.kdbx.data.KdbxStorageSettingsFormat3;
+import de.soderer.utilities.kdbx.data.KdbxStorageSettingsFormat4;
 import de.soderer.utilities.kdbx.data.KdbxTimes;
 import de.soderer.utilities.kdbx.data.KdbxUUID;
 import de.soderer.utilities.kdbx.util.CopyInputStream;
@@ -128,7 +129,7 @@ public class KdbxReader implements AutoCloseable {
 				throw new Exception("Cannot read kdbx data format version: " + e.getMessage(), e);
 			}
 
-			final Map<KdbxOuterHeaderType, byte[]> outerHeaders = new HashMap<>();
+			final Map<KdbxOuterHeaderType, byte[]> outerHeaders = new LinkedHashMap<>();
 			TypeLengthValueStructure nextStructure;
 			while ((nextStructure = TypeLengthValueStructure.read(copyInputStream, dataFormatVersion.getMajorVersionNumber() >= 4)).getTypeId() != KdbxOuterHeaderType.END_OF_HEADER.getId()) {
 				outerHeaders.put(KdbxOuterHeaderType.getById(nextStructure.getTypeId()), nextStructure.getData());
@@ -138,20 +139,31 @@ public class KdbxReader implements AutoCloseable {
 			copyInputStream.setCopyOnRead(false);
 
 			byte[] decryptedXmlPayloadData = null;
-			List<KdbxBinary> binaryAttachments = null;
+			final KdbxDatabase database = new KdbxDatabase();
+			final List<KdbxBinary> binaryAttachments = new ArrayList<>();
 			if (dataFormatVersion.getMajorVersionNumber() == 3) {
+				final KdbxStorageSettingsFormat3 storageSettings = new KdbxStorageSettingsFormat3();
+				storageSettings.setDataFormatVersion(dataFormatVersion);
+				storageSettings.setOuterEncryptionAlgorithm(OuterEncryptionAlgorithm.getById(outerHeaders.get(KdbxOuterHeaderType.CIPHER_ID)));
+				storageSettings.setTransformRounds(Utilities.readLittleEndianValueFromByteArray(outerHeaders.get(KdbxOuterHeaderType.TRANSFORM_ROUNDS)));
+				storageSettings.setCompressData(outerHeaders.get(KdbxOuterHeaderType.COMPRESSION_FLAGS) != null && (Utilities.readIntFromLittleEndianBytes(outerHeaders.get(KdbxOuterHeaderType.COMPRESSION_FLAGS)) & 1) == 1);
+				storageSettings.setInnerEncryptionAlgorithm(InnerEncryptionAlgorithm.getById(Utilities.readIntFromLittleEndianBytes(outerHeaders.get(KdbxOuterHeaderType.INNER_RANDOM_STREAM_ID))));
+				database.setStorageSettings(storageSettings);
+
 				decryptedXmlPayloadData = decryptVersion3(credentials, outerHeaders);
 			} else if (dataFormatVersion.getMajorVersionNumber() >= 4) {
-				binaryAttachments = new ArrayList<>();
-				decryptedXmlPayloadData = decryptVersion4(credentials, outerHeaders, outerHeadersDataBytes, binaryAttachments);
+				final KdbxStorageSettingsFormat4 storageSettings = new KdbxStorageSettingsFormat4();
+				storageSettings.setDataFormatVersion(dataFormatVersion);
+				storageSettings.setOuterEncryptionAlgorithm(OuterEncryptionAlgorithm.getById(outerHeaders.get(KdbxOuterHeaderType.CIPHER_ID)));
+				storageSettings.setCompressData(outerHeaders.get(KdbxOuterHeaderType.COMPRESSION_FLAGS) != null && (Utilities.readIntFromLittleEndianBytes(outerHeaders.get(KdbxOuterHeaderType.COMPRESSION_FLAGS)) & 1) == 1);
+				database.setStorageSettings(storageSettings);
+				decryptedXmlPayloadData = decryptVersion4(credentials, outerHeaders, outerHeadersDataBytes, storageSettings, binaryAttachments);
 			} else {
 				throw new Exception("Major kdbx file version " + dataFormatVersion.getMajorVersionNumber() + " is not supported");
 			}
 
 			final Document document = Utilities.parseXmlFile(decryptedXmlPayloadData);
 
-			final KdbxDatabase database = new KdbxDatabase();
-			database.setDataFormatVersion(dataFormatVersion);
 			database.setBinaryAttachments(binaryAttachments);
 
 			final Node rootNode = document.getDocumentElement();
@@ -182,7 +194,6 @@ public class KdbxReader implements AutoCloseable {
 
 	private byte[] decryptVersion3(final KdbxCredentials credentials, final Map<KdbxOuterHeaderType, byte[]> outerHeaders) throws Exception {
 		final byte[] decryptionKey;
-		byte[] decryptedPayload;
 		final long transformRounds = Utilities.readLittleEndianValueFromByteArray(outerHeaders.get(KdbxOuterHeaderType.TRANSFORM_ROUNDS));
 		final byte[] transformSeed = outerHeaders.get(KdbxOuterHeaderType.TRANSFORM_SEED);
 		decryptionKey = deriveKeyByAES(credentials, transformRounds, transformSeed);
@@ -207,17 +218,17 @@ public class KdbxReader implements AutoCloseable {
 		} catch(final BadPaddingException e) {
 			throw new Exception("Decryption failed because of bad padding",e);
 		} catch(final Exception e) {
-			throw new Exception("Decryption failed",e);
+			throw new Exception("Decryption failed", e);
 		}
 
 		final ByteArrayInputStream decryptedPayloadStream = new ByteArrayInputStream(decryptedData);
-		final byte[] expected = outerHeaders.get(KdbxOuterHeaderType.STREAM_START_BYTES);
-		final byte[] actual = new byte[expected.length];
-		final int readBytes = decryptedPayloadStream.read(actual);
-		if (readBytes != expected.length) {
+		final byte[] expectedStartBytes = outerHeaders.get(KdbxOuterHeaderType.STREAM_START_BYTES);
+		final byte[] actualStartBytes = new byte[expectedStartBytes.length];
+		final int readBytes = decryptedPayloadStream.read(actualStartBytes);
+		if (readBytes != expectedStartBytes.length) {
 			throw new Exception("Cannot read start bytes from payload: Not enough data left");
 		}
-		if (!Arrays.equals(expected, actual)) {
+		if (!Arrays.equals(expectedStartBytes, actualStartBytes)) {
 			throw new Exception("Bad master key, decryption failed");
 		}
 
@@ -241,14 +252,15 @@ public class KdbxReader implements AutoCloseable {
 		final byte[] innerEncryptionKeyBytes = outerHeaders.get(KdbxOuterHeaderType.PROTECTED_STREAM_KEY);
 		innerEncryptionCipher = createInnerEncryptionCipher(innerEncryptionAlgorithm, innerEncryptionKeyBytes);
 
-		decryptedPayload = payloadData.toByteArray();
+		byte[] decryptedPayload = payloadData.toByteArray();
 		if (streamIsCompressed) {
 			decryptedPayload = Utilities.gunzip(decryptedPayload);
 		}
+
 		return decryptedPayload;
 	}
 
-	private byte[] decryptVersion4(final KdbxCredentials credentials, final Map<KdbxOuterHeaderType, byte[]> outerHeaders, final byte[] outerHeadersDataBytes, final List<KdbxBinary> binaryAttachments) throws Exception {
+	private byte[] decryptVersion4(final KdbxCredentials credentials, final Map<KdbxOuterHeaderType, byte[]> outerHeaders, final byte[] outerHeadersDataBytes, final KdbxStorageSettingsFormat4 storageSettings, final List<KdbxBinary> binaryAttachments) throws Exception {
 		final byte[] decryptedPayload;
 		final byte[] kdfParamsBytes = outerHeaders.get(KdbxOuterHeaderType.KDF_PARAMETERS);
 		final VariantDictionary variantDictionary = VariantDictionary.read(new ByteArrayInputStream(kdfParamsBytes));
@@ -332,7 +344,7 @@ public class KdbxReader implements AutoCloseable {
 			case CHACHA20:
 				Security.addProvider(new BouncyCastleProvider());
 				cipher = Cipher.getInstance("ChaCha20");
-				secretKeySpec = new SecretKeySpec(finalKey, "AES");
+				secretKeySpec = new SecretKeySpec(finalKey, "ChaCha20");
 				paramSpec = new IvParameterSpec(encryptionIV);
 				break;
 			case TWOFISH:
@@ -350,7 +362,7 @@ public class KdbxReader implements AutoCloseable {
 			inputStream = new GZIPInputStream(inputStream);
 		}
 
-		final Map<KdbxInnerHeaderType, byte[]> innerHeaders = new HashMap<>();
+		final Map<KdbxInnerHeaderType, byte[]> innerHeaders = new LinkedHashMap<>();
 		TypeLengthValueStructure nextInnerHeaderStructure;
 		while ((nextInnerHeaderStructure = TypeLengthValueStructure.read(inputStream, true)).getTypeId() != KdbxInnerHeaderType.END_OF_HEADER.getId()) {
 			final KdbxInnerHeaderType innerHeaderType = KdbxInnerHeaderType.getById(nextInnerHeaderStructure.getTypeId());
@@ -370,6 +382,7 @@ public class KdbxReader implements AutoCloseable {
 			throw new Exception("Inner header lacks RANDOM_STREAM_ID");
 		}
 		final InnerEncryptionAlgorithm innerEncryptionAlgorithm = InnerEncryptionAlgorithm.getById(Utilities.readIntFromLittleEndianBytes(innerEncryptionAlgorithmIdBytes));
+		storageSettings.setInnerEncryptionAlgorithm(innerEncryptionAlgorithm);
 		final byte[] innerEncryptionKeyBytes = innerHeaders.get(KdbxInnerHeaderType.INNER_RANDOM_STREAM_KEY);
 		innerEncryptionCipher = createInnerEncryptionCipher(innerEncryptionAlgorithm, innerEncryptionKeyBytes);
 
@@ -382,7 +395,7 @@ public class KdbxReader implements AutoCloseable {
 		builder.withIterations(((Number) variantDictionary.get(VariantDictionary.KDF_ARGON2_ITERATIONS).getJavaValue()).intValue());
 		builder.withMemoryAsKB((int) (((Number) variantDictionary.get(VariantDictionary.KDF_ARGON2_MEMORY_IN_BYTES).getJavaValue()).longValue() / 1024));
 		builder.withParallelism(((Number) variantDictionary.get(VariantDictionary.KDF_ARGON2_PARALLELISM).getJavaValue()).intValue());
-		builder.withSalt((byte[]) variantDictionary.get(VariantDictionary.KDF_ARGON2_SALT ).getJavaValue());
+		builder.withSalt((byte[]) variantDictionary.get(VariantDictionary.KDF_ARGON2_SALT).getJavaValue());
 		builder.withVersion(((Number) variantDictionary.get(VariantDictionary.KDF_ARGON2_VERSION).getJavaValue()).intValue());
 
 		final Argon2Parameters parameters = builder.build();
