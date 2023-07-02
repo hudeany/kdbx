@@ -58,7 +58,7 @@ try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDataba
 }
 ```
 
-### KdbxWriter example with password:
+### KdbxWriter example with simple password:
 ```java
 KdbxDatabase database = new KdbxDatabase();
 final KdbxEntry kdbxEntry = new KdbxEntry();
