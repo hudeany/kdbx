@@ -68,7 +68,6 @@ database.getEntries().add(kdbxEntry);
 
 try (KdbxWriter kdbxWriter = new KdbxWriter(new FileOutputStream("MyKeePassDatabase.kdbx"))) {
   kdbxWriter.writeKdbxDatabase(database, "MyPassword".toCharArray());
-  System.out.println("Overall number of stored entries: " + database.getAllEntries().size());
 } catch (final Exception e) {
   e.printStackTrace();
 }
