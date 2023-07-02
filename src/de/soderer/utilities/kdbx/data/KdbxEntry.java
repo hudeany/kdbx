@@ -42,7 +42,7 @@ public class KdbxEntry {
 		return (String) items.get("Title");
 	}
 
-	public KdbxEntry setUsername(final KdbxTimes username) {
+	public KdbxEntry setUsername(final String username) {
 		items.put("Username", username);
 		return this;
 	}
