@@ -24,7 +24,8 @@ Java Kdbx File Format Reader and Writer (KeePass2 file format)
 - Keyfile only (simple keyfile like txt or Kdbx keyfile version 1.00 and 2.0)
 
 By now only KdbxReader is working
-KdbxWriter is still missing, but will come in near time.
+KdbxWriter for Dataversion 4.x is now working
+KdbxWriter for Dataversion 3.x will come in near future
 
 ## Code examples
 ### KdbxReader example with simple password:
@@ -51,6 +52,22 @@ try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDataba
   final byte[] keyFileData = Utilities.toByteArray(new FileInputStream("MyKeePassKeyFile.keyx"));
   final KdbxCredentials credentials = new KdbxCredentials("MyPassword".toCharArray(), keyFileData);
   final KdbxDatabase database = kdbxReader.readKdbxDatabase(credentials);
+  System.out.println("Overall number of stored entries: " + database.getAllEntries().size());
+} catch (final Exception e) {
+  e.printStackTrace();
+}
+```
+
+### KdbxWriter example with password:
+```java
+KdbxDatabase database = new KdbxDatabase();
+final KdbxEntry kdbxEntry = new KdbxEntry();
+kdbxEntry.setUsername("MyUsername");
+kdbxEntry.setPassword("MyPassword");
+database.getEntries().add(kdbxEntry);
+
+try (KdbxWriter kdbxWriter = new KdbxWriter(new FileOutputStream("MyKeePassDatabase.kdbx"))) {
+  kdbxWriter.writeKdbxDatabase(database, "MyPassword".toCharArray());
   System.out.println("Overall number of stored entries: " + database.getAllEntries().size());
 } catch (final Exception e) {
   e.printStackTrace();
