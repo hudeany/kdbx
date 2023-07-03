@@ -30,7 +30,6 @@ import javax.crypto.CipherOutputStream;
 import javax.crypto.Mac;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerConfigurationException;
@@ -151,7 +150,7 @@ public class KdbxWriter implements AutoCloseable {
 		}
 	}
 
-	private Document createXmlDocument(final KdbxDatabase database, final KdbxStorageSettings storageSettings, final StreamCipher innerEncryptionCipher) throws ParserConfigurationException, Exception {
+	private Document createXmlDocument(final KdbxDatabase database, final Version dataFormatVersion, final StreamCipher innerEncryptionCipher) throws Exception {
 		final Set<String> keyNamesToEncrypt = new HashSet<>();
 		final KdbxMemoryProtection memoryProtection = database.getMeta().getMemoryProtection();
 		if (memoryProtection.isProtectTitle()) {
@@ -176,10 +175,10 @@ public class KdbxWriter implements AutoCloseable {
 
 		final Document document = Utilities.createNewDocument();
 		final Node xmlDocumentRootNode = Utilities.appendNode(document, "KeePassFile");
-		final Node metaNode = writeMetaNode(storageSettings.getDataFormatVersion(), xmlDocumentRootNode, database.getMeta());
-		writeRootNode(innerEncryptionCipher, keyNamesToEncrypt, storageSettings.getDataFormatVersion(), xmlDocumentRootNode, database);
+		final Node metaNode = writeMetaNode(dataFormatVersion, xmlDocumentRootNode, database.getMeta());
+		writeRootNode(innerEncryptionCipher, keyNamesToEncrypt, dataFormatVersion, xmlDocumentRootNode, database);
 
-		if (storageSettings.getDataFormatVersion().getMajorVersionNumber() < 4) {
+		if (dataFormatVersion.getMajorVersionNumber() < 4) {
 			writeBinariesToMeta(metaNode, database.getBinaryAttachments());
 		}
 		return document;
@@ -238,7 +237,7 @@ public class KdbxWriter implements AutoCloseable {
 		final byte[] sha256Hash = MessageDigest.getInstance("SHA-256").digest(outerHeadersDataBytes);
 		database.getMeta().setHeaderHash(Base64.getEncoder().encodeToString(sha256Hash));
 
-		final Document document = createXmlDocument(database, storageSettings, innerEncryptionCipher);
+		final Document document = createXmlDocument(database, storageSettings.getDataFormatVersion(), innerEncryptionCipher);
 
 		final ByteArrayOutputStream payloadStream = new ByteArrayOutputStream();
 		payloadStream.write(outerHeaders.get(KdbxOuterHeaderType.STREAM_START_BYTES));
@@ -415,7 +414,7 @@ public class KdbxWriter implements AutoCloseable {
 		}
 		new TypeLengthValueStructure(KdbxInnerHeaderType.END_OF_HEADER.getId(), new byte[0]).write(dataOutputStream, true);
 
-		final Document document = createXmlDocument(database, storageSettings, innerEncryptionCipher);
+		final Document document = createXmlDocument(database, storageSettings.getDataFormatVersion(), innerEncryptionCipher);
 
 		dataOutputStream.write(convertXML2ByteArray(document, StandardCharsets.UTF_8));
 		dataOutputStream.flush();
