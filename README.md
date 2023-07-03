@@ -63,12 +63,12 @@ try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDataba
 ```java
 KdbxDatabase database = new KdbxDatabase();
 final KdbxEntry kdbxEntry = new KdbxEntry();
-kdbxEntry.setUsername("MyUsername");
-kdbxEntry.setPassword("MyPassword");
+kdbxEntry.setUsername("MyUsernameForThisEntry");
+kdbxEntry.setPassword("MyPasswordForThisEntry");
 database.getEntries().add(kdbxEntry);
 
 try (KdbxWriter kdbxWriter = new KdbxWriter(new FileOutputStream("MyKeePassDatabase.kdbx"))) {
-  kdbxWriter.writeKdbxDatabase(database, "MyPassword".toCharArray());
+  kdbxWriter.writeKdbxDatabase(database, "MyDatabasePassword".toCharArray());
 } catch (final Exception e) {
   e.printStackTrace();
 }
