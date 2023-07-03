@@ -1,6 +1,8 @@
 # kdbx
 Java Kdbx File Format Reader and Writer (KeePass2 file format)
 
+**KdbxWriter and -Reader for Dataversion 3.x && 4.x is now working and created kdbx files are read by the KeePass2 application without errors.**
+
 ## Dependencies:
 - JAVA 8
 - Bouncy Castle Crypto Provider
@@ -22,10 +24,6 @@ Java Kdbx File Format Reader and Writer (KeePass2 file format)
 - Password only
 - Password with keyfile (simple keyfile like txt or Kdbx keyfile version 1.00 and 2.0)
 - Keyfile only (simple keyfile like txt or Kdbx keyfile version 1.00 and 2.0)
-
-By now only KdbxReader is working
-KdbxWriter for Dataversion 4.x is now working
-KdbxWriter for Dataversion 3.x will come in near future
 
 ## Code examples
 ### KdbxReader example with simple password:
