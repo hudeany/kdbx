@@ -121,7 +121,7 @@ public class KdbxConstants {
 		 * ID 3: Binary (entry attachment). D = F ‖ M, where F is one byte and M is the binary content (i.e. the actual entry attachment data).
 		 * F stores flags for the binary; supported flags are:
 		 * - 0x01: The user has turned on process memory protection for this binary.
-		 * // TODO on decryp protected data
+		 * // TODO on decrypt protected data
 		 */
 		BINARY_ATTACHMENT(3);
 

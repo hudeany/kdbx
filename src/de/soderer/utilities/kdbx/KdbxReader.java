@@ -157,6 +157,7 @@ public class KdbxReader implements AutoCloseable {
 				storageSettings.setOuterEncryptionAlgorithm(OuterEncryptionAlgorithm.getById(outerHeaders.get(KdbxOuterHeaderType.CIPHER_ID)));
 				storageSettings.setCompressData(outerHeaders.get(KdbxOuterHeaderType.COMPRESSION_FLAGS) != null && (Utilities.readIntFromLittleEndianBytes(outerHeaders.get(KdbxOuterHeaderType.COMPRESSION_FLAGS)) & 1) == 1);
 				database.setStorageSettings(storageSettings);
+
 				decryptedXmlPayloadData = decryptVersion4(credentials, outerHeaders, outerHeadersDataBytes, storageSettings, binaryAttachments);
 			} else {
 				throw new Exception("Major kdbx file version " + dataFormatVersion.getMajorVersionNumber() + " is not supported");
@@ -250,6 +251,9 @@ public class KdbxReader implements AutoCloseable {
 		}
 		final InnerEncryptionAlgorithm innerEncryptionAlgorithm = InnerEncryptionAlgorithm.getById(Utilities.readIntFromLittleEndianBytes(innerEncryptionAlgorithmIdBytes));
 		final byte[] innerEncryptionKeyBytes = outerHeaders.get(KdbxOuterHeaderType.PROTECTED_STREAM_KEY);
+		if (innerEncryptionKeyBytes == null) {
+			throw new Exception("Inner header lacks PROTECTED_STREAM_KEY");
+		}
 		innerEncryptionCipher = createInnerEncryptionCipher(innerEncryptionAlgorithm, innerEncryptionKeyBytes);
 
 		byte[] decryptedPayload = payloadData.toByteArray();

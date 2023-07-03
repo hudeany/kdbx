@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.zip.GZIPOutputStream;
 
 import javax.crypto.BadPaddingException;
@@ -29,6 +30,7 @@ import javax.crypto.CipherOutputStream;
 import javax.crypto.Mac;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerConfigurationException;
@@ -128,20 +130,28 @@ public class KdbxWriter implements AutoCloseable {
 		outerHeaders.put(KdbxOuterHeaderType.CIPHER_ID, storageSettings.getOuterEncryptionAlgorithm().getId());
 		outerHeaders.put(KdbxOuterHeaderType.COMPRESSION_FLAGS, Utilities.getLittleEndianBytes(storageSettings.isCompressData() ? 1 : 0));
 
-		final byte[] innerEncryptionKeyBytes = new byte[64];
+		final byte[] innerEncryptionKeyBytes = new byte[32];
 		new SecureRandom().nextBytes(innerEncryptionKeyBytes);
 		final StreamCipher innerEncryptionCipher = createInnerEncryptionCipher(storageSettings.getInnerEncryptionAlgorithm(), innerEncryptionKeyBytes);
 		final Map<KdbxInnerHeaderType, byte[]> innerHeaders;
 		if (storageSettings.getDataFormatVersion().getMajorVersionNumber() < 4) {
-			innerHeaders = null;
 			outerHeaders.put(KdbxOuterHeaderType.INNER_RANDOM_STREAM_ID, Utilities.getLittleEndianBytes(storageSettings.getInnerEncryptionAlgorithm().getId()));
 			outerHeaders.put(KdbxOuterHeaderType.PROTECTED_STREAM_KEY, innerEncryptionKeyBytes);
+			innerHeaders = null;
 		} else {
 			innerHeaders = new LinkedHashMap<>();
 			innerHeaders.put(KdbxInnerHeaderType.INNER_RANDOM_STREAM_ID, Utilities.getLittleEndianBytes(storageSettings.getInnerEncryptionAlgorithm().getId()));
 			innerHeaders.put(KdbxInnerHeaderType.INNER_RANDOM_STREAM_KEY, innerEncryptionKeyBytes);
 		}
 
+		if (storageSettings.getDataFormatVersion().getMajorVersionNumber() < 4) {
+			writeEncryptedDataVersion3(storageSettings.getDataFormatVersion(), outputStream, outerHeaders, credentials, database, storageSettings, innerEncryptionCipher);
+		} else {
+			writeEncryptedDataVersion4(storageSettings.getDataFormatVersion(), outputStream, outerHeaders, innerHeaders, credentials, database, storageSettings, innerEncryptionCipher);
+		}
+	}
+
+	private Document createXmlDocument(final KdbxDatabase database, final KdbxStorageSettings storageSettings, final StreamCipher innerEncryptionCipher) throws ParserConfigurationException, Exception {
 		final Set<String> keyNamesToEncrypt = new HashSet<>();
 		final KdbxMemoryProtection memoryProtection = database.getMeta().getMemoryProtection();
 		if (memoryProtection.isProtectTitle()) {
@@ -172,15 +182,10 @@ public class KdbxWriter implements AutoCloseable {
 		if (storageSettings.getDataFormatVersion().getMajorVersionNumber() < 4) {
 			writeBinariesToMeta(metaNode, database.getBinaryAttachments());
 		}
-
-		if (storageSettings.getDataFormatVersion().getMajorVersionNumber() < 4) {
-			writeEncryptedDataVersion3(storageSettings.getDataFormatVersion(), outputStream, outerHeaders, credentials, document);
-		} else {
-			writeEncryptedDataVersion4(storageSettings.getDataFormatVersion(), outputStream, outerHeaders, innerHeaders, credentials, document, database.getBinaryAttachments());
-		}
+		return document;
 	}
 
-	private void writeEncryptedDataVersion3(final Version dataFormatVersion, final OutputStream dataOutputStream, Map<KdbxOuterHeaderType, byte[]> outerHeaders, final KdbxCredentials credentials, final Document document) throws Exception {
+	private void writeEncryptedDataVersion3(final Version dataFormatVersion, final OutputStream dataOutputStream, final Map<KdbxOuterHeaderType, byte[]> outerHeaders, final KdbxCredentials credentials, final KdbxDatabase database, final KdbxStorageSettings storageSettings, final StreamCipher innerEncryptionCipher) throws Exception {
 		final ByteArrayOutputStream outerHeaderBufferStream = new ByteArrayOutputStream();
 
 		outerHeaderBufferStream.write(Utilities.getLittleEndianBytes(KdbxConstants.KDBX_MAGICNUMBER));
@@ -188,20 +193,6 @@ public class KdbxWriter implements AutoCloseable {
 		outerHeaderBufferStream.write(Utilities.getLittleEndianBytes((short) dataFormatVersion.getMinorVersionNumber()));
 		outerHeaderBufferStream.write(Utilities.getLittleEndianBytes((short) dataFormatVersion.getMajorVersionNumber()));
 
-		if (outerHeaders == null) {
-			outerHeaders = new LinkedHashMap<>();
-		}
-		if (!outerHeaders.containsKey(KdbxOuterHeaderType.CIPHER_ID)) {
-			outerHeaders.put(KdbxOuterHeaderType.CIPHER_ID, OuterEncryptionAlgorithm.CHACHA20.getId());
-		}
-		boolean compressStream;
-		if (!outerHeaders.containsKey(KdbxOuterHeaderType.COMPRESSION_FLAGS)) {
-			outerHeaders.put(KdbxOuterHeaderType.COMPRESSION_FLAGS, Utilities.getLittleEndianBytes(1));
-			compressStream = true;
-		} else {
-			final byte[] flagsBytes = outerHeaders.get(KdbxOuterHeaderType.COMPRESSION_FLAGS);
-			compressStream = flagsBytes != null && (Utilities.readIntFromLittleEndianBytes(flagsBytes) & 1) == 1;
-		}
 		if (!outerHeaders.containsKey(KdbxOuterHeaderType.MASTER_SEED)) {
 			final byte[] masterSeed = new byte[32];
 			new SecureRandom().nextBytes(masterSeed);
@@ -228,11 +219,6 @@ public class KdbxWriter implements AutoCloseable {
 				outerHeaders.put(KdbxOuterHeaderType.ENCRYPTION_IV, initialVectorBytes);
 			}
 		}
-		if (!outerHeaders.containsKey(KdbxOuterHeaderType.PROTECTED_STREAM_KEY)) {
-			final byte[] innerEncryptionKeyBytes = new byte[32];
-			new SecureRandom().nextBytes(innerEncryptionKeyBytes);
-			outerHeaders.put(KdbxOuterHeaderType.PROTECTED_STREAM_KEY, innerEncryptionKeyBytes);
-		}
 		if (!outerHeaders.containsKey(KdbxOuterHeaderType.STREAM_START_BYTES)) {
 			final byte[] streamStartBytes = new byte[32];
 			new SecureRandom().nextBytes(streamStartBytes);
@@ -242,17 +228,25 @@ public class KdbxWriter implements AutoCloseable {
 			outerHeaders.put(KdbxOuterHeaderType.INNER_RANDOM_STREAM_ID, Utilities.getLittleEndianBytes(InnerEncryptionAlgorithm.SALSA20.getId()));
 		}
 
-		for (final Entry<KdbxOuterHeaderType, byte[]> outerHeader : outerHeaders.entrySet()) {
+		for (final Entry<KdbxOuterHeaderType, byte[]> outerHeader : outerHeaders.entrySet().stream().sorted(Map.Entry.comparingByKey()).collect(Collectors.toList())) {
 			new TypeLengthValueStructure(outerHeader.getKey().getId(), outerHeader.getValue()).write(outerHeaderBufferStream, false);
 		}
 		new TypeLengthValueStructure(KdbxOuterHeaderType.END_OF_HEADER.getId(), new byte[] {0x0D, 0x0A, 0x0D, 0x0A}).write(outerHeaderBufferStream, false);
 		final byte[] outerHeadersDataBytes = outerHeaderBufferStream.toByteArray();
 		dataOutputStream.write(outerHeadersDataBytes);
 
+		final byte[] sha256Hash = MessageDigest.getInstance("SHA-256").digest(outerHeadersDataBytes);
+		database.getMeta().setHeaderHash(Base64.getEncoder().encodeToString(sha256Hash));
+
+		final Document document = createXmlDocument(database, storageSettings, innerEncryptionCipher);
+
 		final ByteArrayOutputStream payloadStream = new ByteArrayOutputStream();
 		payloadStream.write(outerHeaders.get(KdbxOuterHeaderType.STREAM_START_BYTES));
 
 		byte[] decryptedPayload = convertXML2ByteArray(document, StandardCharsets.UTF_8);
+
+		final byte[] compressStreamFlagsBytes = outerHeaders.get(KdbxOuterHeaderType.COMPRESSION_FLAGS);
+		final boolean compressStream = compressStreamFlagsBytes != null && (Utilities.readIntFromLittleEndianBytes(compressStreamFlagsBytes) & 1) == 1;
 		if (compressStream) {
 			decryptedPayload = Utilities.gzip(decryptedPayload);
 		}
@@ -290,7 +284,7 @@ public class KdbxWriter implements AutoCloseable {
 		dataOutputStream.close();
 	}
 
-	private void writeEncryptedDataVersion4(final Version dataFormatVersion, OutputStream dataOutputStream, final Map<KdbxOuterHeaderType, byte[]> outerHeaders, final Map<KdbxInnerHeaderType, byte[]> innerHeaders, final KdbxCredentials credentials, final Document document, final List<KdbxBinary> binaryAttachments) throws Exception {
+	private void writeEncryptedDataVersion4(final Version dataFormatVersion, OutputStream dataOutputStream, final Map<KdbxOuterHeaderType, byte[]> outerHeaders, final Map<KdbxInnerHeaderType, byte[]> innerHeaders, final KdbxCredentials credentials, final KdbxDatabase database, final KdbxStorageSettings storageSettings, final StreamCipher innerEncryptionCipher) throws Exception {
 		final ByteArrayOutputStream outerHeaderBufferStream = new ByteArrayOutputStream();
 
 		outerHeaderBufferStream.write(Utilities.getLittleEndianBytes(KdbxConstants.KDBX_MAGICNUMBER));
@@ -416,10 +410,12 @@ public class KdbxWriter implements AutoCloseable {
 
 		new TypeLengthValueStructure(KdbxInnerHeaderType.INNER_RANDOM_STREAM_ID.getId(), innerHeaders.get(KdbxInnerHeaderType.INNER_RANDOM_STREAM_ID)).write(dataOutputStream, true);
 		new TypeLengthValueStructure(KdbxInnerHeaderType.INNER_RANDOM_STREAM_KEY.getId(), innerHeaders.get(KdbxInnerHeaderType.INNER_RANDOM_STREAM_KEY)).write(dataOutputStream, true);
-		for (final KdbxBinary binaryAttachment : binaryAttachments) {
+		for (final KdbxBinary binaryAttachment : database.getBinaryAttachments()) {
 			new TypeLengthValueStructure(KdbxInnerHeaderType.BINARY_ATTACHMENT.getId(), binaryAttachment.getData()).write(dataOutputStream, true);
 		}
 		new TypeLengthValueStructure(KdbxInnerHeaderType.END_OF_HEADER.getId(), new byte[0]).write(dataOutputStream, true);
+
+		final Document document = createXmlDocument(database, storageSettings, innerEncryptionCipher);
 
 		dataOutputStream.write(convertXML2ByteArray(document, StandardCharsets.UTF_8));
 		dataOutputStream.flush();
@@ -471,7 +467,7 @@ public class KdbxWriter implements AutoCloseable {
 		if (meta.getGenerator() != null) {
 			Utilities.appendTextValueNode(metaNode, "Generator", meta.getGenerator());
 		}
-		if (meta.getHeaderHash() != null) {
+		if (dataFormatVersion.getMajorVersionNumber() < 4 && meta.getHeaderHash() != null) {
 			Utilities.appendTextValueNode(metaNode, "HeaderHash", meta.getHeaderHash());
 		}
 		if (meta.getSettingsChanged() != null) {
