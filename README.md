@@ -1,6 +1,7 @@
 # kdbx
 Java Kdbx File Format Reader and Writer (KeePass2 file format)
 
+Release 1.0.0:
 **KdbxWriter and -Reader for Dataversion 3.x && 4.x is now working and created kdbx files are read by the KeePass2 application without errors.**
 
 ## Dependencies:
