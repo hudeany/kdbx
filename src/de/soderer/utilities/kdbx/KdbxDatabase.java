@@ -11,25 +11,25 @@ import java.util.Set;
 import de.soderer.utilities.kdbx.data.KdbxBinary;
 import de.soderer.utilities.kdbx.data.KdbxEntry;
 import de.soderer.utilities.kdbx.data.KdbxGroup;
+import de.soderer.utilities.kdbx.data.KdbxHeaderFormat;
 import de.soderer.utilities.kdbx.data.KdbxMeta;
-import de.soderer.utilities.kdbx.data.KdbxStorageSettings;
 import de.soderer.utilities.kdbx.data.KdbxUUID;
 
 public class KdbxDatabase {
-	private KdbxStorageSettings storageSettings;
+	private KdbxHeaderFormat headerFormat;
 	private List<KdbxBinary> binaryAttachments = null;
 	private KdbxMeta meta = new KdbxMeta();
 	private List<KdbxGroup> groups = new ArrayList<>();
 	private List<KdbxEntry> entries = new ArrayList<>();
 	private final Map<KdbxUUID, ZonedDateTime> deletedObjects = new LinkedHashMap<>();
 
-	public KdbxDatabase setStorageSettings(final KdbxStorageSettings storageSettings) {
-		this.storageSettings = storageSettings;
+	public KdbxDatabase setHeaderFormat(final KdbxHeaderFormat headerFormat) {
+		this.headerFormat = headerFormat;
 		return this;
 	}
 
-	public KdbxStorageSettings getStorageSettings() {
-		return storageSettings;
+	public KdbxHeaderFormat getHeaderFormat() {
+		return headerFormat;
 	}
 
 	/**
