@@ -12,10 +12,6 @@
     </manifest>
     <selectedElements exportClassFiles="true" exportJavaFiles="false" exportOutputFolder="false">
         <javaElement handleIdentifier="=kdbx/src"/>
-        <file path="/kdbx/.classpath"/>
-        <file path="/kdbx/.project"/>
         <file path="/kdbx/LICENSE"/>
-        <file path="/kdbx/README.md"/>
-        <file path="/kdbx/.gitignore"/>
     </selectedElements>
 </jardesc>
