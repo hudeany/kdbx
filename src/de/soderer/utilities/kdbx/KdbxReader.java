@@ -184,6 +184,23 @@ public class KdbxReader implements AutoCloseable {
 
 		database.getHeaderFormat().resetCryptoKeys();
 
+		for (final KdbxEntry entry : database.getAllEntries()) {
+			for (final KdbxEntryBinary binary : entry.getBinaries()) {
+				if (binary.getRefId() != null) {
+					final KdbxBinary databaseBinary = database.getBinaryAttachments().get(binary.getRefId());
+					if (databaseBinary != null) {
+						if (databaseBinary.isCompressed()) {
+							binary.setCompressedData(databaseBinary.getData());
+						} else {
+							binary.setCompressedData(Utilities.gzip(databaseBinary.getData()));
+						}
+					} else {
+						throw new Exception("Cannot find referenced binary id: " + binary.getRefId());
+					}
+				}
+			}
+		}
+
 		return database;
 	}
 
@@ -292,6 +309,23 @@ public class KdbxReader implements AutoCloseable {
 		}
 
 		database.getHeaderFormat().resetCryptoKeys();
+
+		for (final KdbxEntry entry : database.getAllEntries()) {
+			for (final KdbxEntryBinary binary : entry.getBinaries()) {
+				if (binary.getRefId() != null) {
+					final KdbxBinary databaseBinary = database.getBinaryAttachments().get(binary.getRefId());
+					if (databaseBinary != null) {
+						if (databaseBinary.isCompressed()) {
+							binary.setCompressedData(databaseBinary.getData());
+						} else {
+							binary.setCompressedData(Utilities.gzip(databaseBinary.getData()));
+						}
+					} else {
+						throw new Exception("Cannot find referenced binary id: " + binary.getRefId());
+					}
+				}
+			}
+		}
 
 		return database;
 	}
@@ -481,8 +515,7 @@ public class KdbxReader implements AutoCloseable {
 			if (binaryChildNode.getNodeType() != Node.TEXT_NODE) {
 				if ("Binary".equals(binaryChildNode.getNodeName())) {
 					final int id = Integer.parseInt(Utilities.getAttributeValue(binaryChildNode, "ID"));
-					final boolean compressed = "True"
-							.equals(Utilities.getAttributeValue(binaryChildNode, "Compressed"));
+					final boolean compressed = "True".equals(Utilities.getAttributeValue(binaryChildNode, "Compressed"));
 					final String dataBase64String = parseStringValue(binaryChildNode);
 					final byte[] data = Base64.getDecoder().decode(dataBase64String);
 					binaryItems.add(new KdbxBinary().setId(id).setCompressed(compressed).setData(data));
@@ -504,8 +537,7 @@ public class KdbxReader implements AutoCloseable {
 			if (customIconNode.getNodeType() != Node.TEXT_NODE) {
 				if ("Icon".equals(customIconNode.getNodeName())) {
 					final KdbxUUID uuid = parseUuidValue(Utilities.getChildNodesMap(customIconNode).get("UUID"));
-					final String dataBase64String = Utilities
-							.getNodeValue(Utilities.getChildNodesMap(customIconNode).get("Data"));
+					final String dataBase64String = Utilities.getNodeValue(Utilities.getChildNodesMap(customIconNode).get("Data"));
 					final byte[] data = Base64.getDecoder().decode(dataBase64String);
 					customIcons.put(uuid, data);
 				} else {
@@ -830,11 +862,12 @@ public class KdbxReader implements AutoCloseable {
 				throw new Exception("Unexpected entry binary data using refID and data at the same time. ID: " + refID);
 			}
 			final KdbxEntryBinary entryBinary = new KdbxEntryBinary();
+			entryBinary.setKey(key);
 			if (refID != null) {
 				entryBinary.setRefId(refID);
 			}
 			if (data != null) {
-				entryBinary.setData(data);
+				entryBinary.setCompressedData(Utilities.gzip(data));
 			}
 			return entryBinary;
 		}
@@ -853,8 +886,7 @@ public class KdbxReader implements AutoCloseable {
 				if (elapsedSeconds < 0) {
 					throw new Exception("Long value of seconds since 0001-01-001 00:00:00 UTC overflowed: " + elapsedSeconds);
 				} else {
-					return ZonedDateTime.of(1, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC")).plusSeconds(elapsedSeconds)
-							.withZoneSameInstant(ZoneId.systemDefault());
+					return ZonedDateTime.of(1, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC")).plusSeconds(elapsedSeconds).withZoneSameInstant(ZoneId.systemDefault());
 				}
 			} catch (final Exception e) {
 				throw new Exception("Invalid DateTime base64 value: " + stringValue, e);

@@ -404,14 +404,14 @@ public class Utilities {
 		return document;
 	}
 
-	public static Node appendNode(final Document document, final String tagName) {
-		final Node newNode = document.createElement(tagName);
+	public static Element appendNode(final Document document, final String tagName) {
+		final Element newNode = document.createElement(tagName);
 		document.appendChild(newNode);
 		return newNode;
 	}
 
-	public static Node appendNode(final Node baseNode, final String tagName) {
-		final Node newNode = baseNode.getOwnerDocument().createElement(tagName);
+	public static Element appendNode(final Node baseNode, final String tagName) {
+		final Element newNode = baseNode.getOwnerDocument().createElement(tagName);
 		baseNode.appendChild(newNode);
 		return newNode;
 	}

@@ -129,8 +129,16 @@ public class KdbxHeaderFormat4 extends KdbxHeaderFormat {
 		final ByteArrayOutputStream innerHeaderBufferStream = new ByteArrayOutputStream();
 		new TypeLengthValueStructure(1, Utilities.getLittleEndianBytes(innerEncryptionAlgorithm.getId())).write(innerHeaderBufferStream, true);
 		new TypeLengthValueStructure(2, innerEncryptionKeyBytes).write(innerHeaderBufferStream, true);
+
 		for (final KdbxBinary binaryAttachment : database.getBinaryAttachments()) {
-			new TypeLengthValueStructure(3, binaryAttachment.getData()).write(innerHeaderBufferStream, true);
+			byte[] binaryAttachmentData = binaryAttachment.getData();
+			if (binaryAttachment.isCompressed()) {
+				binaryAttachmentData = Utilities.gunzip(binaryAttachmentData);
+			}
+			final boolean isEncrypted = false;
+			final byte flags = isEncrypted ? 1 : 0;
+			binaryAttachmentData = Utilities.concatArrays(new byte[] { flags }, binaryAttachmentData);
+			new TypeLengthValueStructure(3, binaryAttachmentData).write(innerHeaderBufferStream, true);
 		}
 		new TypeLengthValueStructure(0, new byte[0]).write(innerHeaderBufferStream, true);
 		return innerHeaderBufferStream.toByteArray();
@@ -144,8 +152,15 @@ public class KdbxHeaderFormat4 extends KdbxHeaderFormat {
 			if (nextInnerHeaderStructure.getTypeId() == 3) {
 				// BINARY_ATTACHMENT data is referenced by entries via position id in data version 4.0 and higher
 				final KdbxBinary binaryAttachment = new KdbxBinary();
-				binaryAttachment.setId(binaryAttachments.size() + 1);
-				binaryAttachment.setData(nextInnerHeaderStructure.getData());
+				binaryAttachment.setId(binaryAttachments.size());
+				byte[] databaseBinaryData = nextInnerHeaderStructure.getData();
+				final byte flags = databaseBinaryData[0];
+				final boolean isEncrypted = (flags & 1) == 1;
+				if (isEncrypted) {
+					throw new Exception("Memoryprotection for attachments is not supported yet");
+				}
+				databaseBinaryData = Arrays.copyOfRange(databaseBinaryData, 1, databaseBinaryData.length);
+				binaryAttachment.setData(databaseBinaryData);
 				binaryAttachments.add(binaryAttachment);
 			} else {
 				innerHeaders.put(nextInnerHeaderStructure.getTypeId(), nextInnerHeaderStructure.getData());

@@ -8,7 +8,7 @@ public class KdbxGroup {
 	public KdbxUUID uuid;
 	public KdbxTimes times;
 	public String notes;
-	public int iconID;
+	public Integer iconID;
 	public KdbxUUID customIconUuid;
 	public boolean expanded;
 	public String defaultAutoTypeSequence;
@@ -76,7 +76,7 @@ public class KdbxGroup {
 	/**
 	 * Standard icon id for this group
 	 */
-	public KdbxGroup setIconID(final int iconID) {
+	public KdbxGroup setIconID(final Integer iconID) {
 		this.iconID = iconID;
 		return this;
 	}
@@ -84,7 +84,7 @@ public class KdbxGroup {
 	/**
 	 * Standard icon id for this group
 	 */
-	public int getIconID() {
+	public Integer getIconID() {
 		return iconID;
 	}
 

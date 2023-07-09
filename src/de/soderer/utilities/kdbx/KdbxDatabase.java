@@ -2,6 +2,7 @@ package de.soderer.utilities.kdbx;
 
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -9,11 +10,14 @@ import java.util.Map;
 import java.util.Set;
 
 import de.soderer.utilities.kdbx.data.KdbxBinary;
+import de.soderer.utilities.kdbx.data.KdbxConstants;
 import de.soderer.utilities.kdbx.data.KdbxEntry;
+import de.soderer.utilities.kdbx.data.KdbxEntryBinary;
 import de.soderer.utilities.kdbx.data.KdbxGroup;
 import de.soderer.utilities.kdbx.data.KdbxHeaderFormat;
 import de.soderer.utilities.kdbx.data.KdbxMeta;
 import de.soderer.utilities.kdbx.data.KdbxUUID;
+import de.soderer.utilities.kdbx.util.Utilities;
 
 public class KdbxDatabase {
 	private KdbxHeaderFormat headerFormat;
@@ -157,14 +161,56 @@ public class KdbxDatabase {
 			if (!usedUuids.add(group.getUuid())) {
 				throw new Exception("Group with duplicate UUID found: " + group.getUuid().toHex());
 			}
+			if (group.getIconID() != null) {
+				try {
+					KdbxConstants.KdbxStandardIcon.getById(group.getIconID());
+				} catch (final Exception e) {
+					throw new Exception("Invalid standard icon id found in group '" + group.getName() + "': " + group.getIconID(), e);
+				}
+			}
 		}
 		for (final KdbxEntry entry : getAllEntries()) {
 			if (!usedUuids.add(entry.getUuid())) {
 				throw new Exception("Entry with duplicate UUID found: " + entry.getUuid().toHex());
 			}
+			if (entry.getIconID() != null) {
+				try {
+					KdbxConstants.KdbxStandardIcon.getById(entry.getIconID());
+				} catch (final Exception e) {
+					throw new Exception("Invalid standard icon id found in entry '" + entry.getTitle() + "': " + entry.getIconID(), e);
+				}
+			}
 		}
-		// TODO: check IconIDs
-		// TODO: check ids for binary attachments
-		// TODO: The same binary attachment should not be stored multiple times
+
+		// Only referenced binaries will be stored
+		// The same binary attachment should not be stored multiple times
+		setBinaryAttachments(new ArrayList<>());
+		for (final KdbxEntry entry : getAllEntries()) {
+			for (final KdbxEntryBinary entryBinary : entry.getBinaries()) {
+				final byte[] entryBinaryData = entryBinary.getData();
+				if (entryBinaryData != null) {
+					boolean foundInBinaryAttachments = false;
+					for (final KdbxBinary binaryAttachment : getBinaryAttachments()) {
+						byte[] binaryAttachmentData = binaryAttachment.getData();
+						if (binaryAttachment.isCompressed()) {
+							binaryAttachmentData = Utilities.gunzip(binaryAttachmentData);
+						}
+						if (Arrays.equals(binaryAttachmentData, entryBinaryData)) {
+							entryBinary.setRefId(binaryAttachment.getId());
+							foundInBinaryAttachments = true;
+							break;
+						}
+					}
+					if (!foundInBinaryAttachments) {
+						final KdbxBinary newBinaryAttachment = new KdbxBinary();
+						newBinaryAttachment.setId(getBinaryAttachments().size());
+						newBinaryAttachment.setData(Utilities.gzip(entryBinaryData));
+						newBinaryAttachment.setCompressed(true);
+						getBinaryAttachments().add(newBinaryAttachment);
+						entryBinary.setRefId(newBinaryAttachment.getId());
+					}
+				}
+			}
+		}
 	}
 }

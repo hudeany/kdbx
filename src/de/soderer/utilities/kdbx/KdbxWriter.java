@@ -256,7 +256,7 @@ public class KdbxWriter implements AutoCloseable {
 		writeRootNode(innerEncryptionCipher, keyNamesToEncrypt, dataFormatVersion, xmlDocumentRootNode, database);
 
 		if (dataFormatVersion.getMajorVersionNumber() < 4) {
-			writeBinariesToMeta(metaNode, database.getBinaryAttachments());
+			writeBinariesToMeta(metaNode, database);
 		}
 		return document;
 	}
@@ -361,8 +361,13 @@ public class KdbxWriter implements AutoCloseable {
 			Utilities.appendTextValueNode(metaNode, "LastTopVisibleGroup", formatKdbxUUIDValue(meta.getLastTopVisibleGroup()));
 		}
 		writeMemoryProtectionNode(metaNode, meta.getMemoryProtection());
-		writeCustomIcons(metaNode, meta.getCustomIcons());
-		writeCustomData(dataFormatVersion, metaNode, meta.getCustomData());
+
+		if (meta.getCustomIcons() != null && meta.getCustomIcons().size() > 0) {
+			writeCustomIcons(metaNode, meta.getCustomIcons());
+		}
+		if (meta.getCustomData() != null && meta.getCustomData().size() > 0) {
+			writeCustomData(dataFormatVersion, metaNode, meta.getCustomData());
+		}
 		return metaNode;
 	}
 
@@ -397,17 +402,17 @@ public class KdbxWriter implements AutoCloseable {
 		}
 	}
 
-	private static void writeBinariesToMeta(final Node metaNode, final List<KdbxBinary> binaryAttachments) throws Exception {
+	private static void writeBinariesToMeta(final Node metaNode, final KdbxDatabase database) throws Exception {
 		final Node binariesNode = Utilities.appendNode(metaNode, "Binaries");
-		for (final KdbxBinary binaryAttachment : binaryAttachments) {
-			final Node binaryNode = Utilities.appendNode(binariesNode, "Binary");
-			Utilities.appendTextValueNode(binaryNode, "ID", formatIntegerValue(binaryAttachment.getId()));
-			Utilities.appendTextValueNode(binaryNode, "Compressed", formatBooleanValue(binaryAttachment.isCompressed()));
-			byte[] valueBytes = binaryAttachment.getData();
-			if (binaryAttachment.isCompressed()) {
-				valueBytes = Utilities.gzip(valueBytes);
+		for (final KdbxBinary binaryAttachment : database.getBinaryAttachments()) {
+			final Element binaryNode = Utilities.appendNode(binariesNode, "Binary");
+			Utilities.appendAttribute(binaryNode, "ID", formatIntegerValue(binaryAttachment.getId()));
+			if (!binaryAttachment.isCompressed()) {
+				binaryAttachment.setData(Utilities.gzip(binaryAttachment.getData()));
+				binaryAttachment.setCompressed(true);
 			}
-			final String valueString = Base64.getEncoder().encodeToString(valueBytes);
+			Utilities.appendAttribute(binaryNode, "Compressed", formatBooleanValue(binaryAttachment.isCompressed()));
+			final String valueString = Base64.getEncoder().encodeToString(binaryAttachment.getData());
 			binaryNode.appendChild(binaryNode.getOwnerDocument().createTextNode(valueString));
 		}
 	}
@@ -482,8 +487,13 @@ public class KdbxWriter implements AutoCloseable {
 			}
 		}
 
-		for (final KdbxEntryBinary entryBinary : entry.getBinaries()) {
-			// TODO write entry binaries
+		if (entry.getBinaries() != null && entry.getBinaries().size() > 0) {
+			for (final KdbxEntryBinary entryBinary : entry.getBinaries()) {
+				final Element binaryNode = Utilities.appendNode(entryNode, "Binary");
+				Utilities.appendTextValueNode(binaryNode, "Key", entryBinary.getKey());
+				final Element valueNode = Utilities.appendNode(binaryNode, "Value");
+				Utilities.appendAttribute(valueNode, "Ref", Integer.toString(entryBinary.getRefId()));
+			}
 		}
 
 		final Node autoTypeNode = Utilities.appendNode(entryNode, "AutoType");

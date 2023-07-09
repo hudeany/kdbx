@@ -7,7 +7,7 @@ import java.util.Map;
 
 public class KdbxEntry {
 	private KdbxUUID uuid;
-	private int iconID;
+	private Integer iconID;
 	public KdbxUUID customIconUuid;
 	private String foregroundColor;
 	private String backgroundColor;
@@ -78,12 +78,12 @@ public class KdbxEntry {
 		return (String) items.get("Notes");
 	}
 
-	public KdbxEntry setIconID(final int iconID) {
+	public KdbxEntry setIconID(final Integer iconID) {
 		this.iconID = iconID;
 		return this;
 	}
 
-	public int getIconID() {
+	public Integer getIconID() {
 		return iconID;
 	}
 
