@@ -80,7 +80,7 @@ try (KdbxWriter kdbxWriter = new KdbxWriter(new FileOutputStream("MyKeePassDatab
 	e.printStackTrace();
 }
 
-try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDatabase.kdbx")).setStrictMode(true)) {
+try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDatabase.kdbx"))) {
 	database = kdbxReader.readKdbxDatabase("MyDatabasePassword".toCharArray());
 	System.out.println(database.getHeaderFormat().getDataFormatVersion().toString());
 	System.out.println(database.getMeta().getDatabaseName());
