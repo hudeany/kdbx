@@ -62,14 +62,31 @@ try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDataba
 ### KdbxWriter example with simple password:
 ```java
 KdbxDatabase database = new KdbxDatabase();
+database.getMeta().setDatabaseName("MyDatabase");
 final KdbxEntry kdbxEntry = new KdbxEntry();
+kdbxEntry.setTitle("MyEntry");
+kdbxEntry.setUrl("https://MyDomain");
 kdbxEntry.setUsername("MyUsernameForThisEntry");
 kdbxEntry.setPassword("MyPasswordForThisEntry");
 database.getEntries().add(kdbxEntry);
 
-try (KdbxWriter kdbxWriter = new KdbxWriter(new FileOutputStream("MyKeePassDatabase.kdbx"))) {
-  kdbxWriter.writeKdbxDatabase(database, "MyDatabasePassword".toCharArray());
+final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+try (KdbxWriter kdbxWriter = new KdbxWriter(outputStream)) {
+	kdbxWriter.writeKdbxDatabase(database, "MyDatabasePassword".toCharArray());
 } catch (final Exception e) {
-  e.printStackTrace();
+	e.printStackTrace();
+}
+
+try (KdbxReader kdbxReader = new KdbxReader(new ByteArrayInputStream(outputStream.toByteArray())).setStrictMode(true)) {
+	database = kdbxReader.readKdbxDatabase("MyDatabasePassword".toCharArray());
+	System.out.println(database.getHeaderFormat().getDataFormatVersion().toString());
+	System.out.println(database.getMeta().getDatabaseName());
+	System.out.println(database.getAllEntries().size());
+	System.out.println(database.getEntries().get(0).getTitle());
+	System.out.println(database.getEntries().get(0).getUrl());
+	System.out.println(database.getEntries().get(0).getUsername());
+	System.out.println(database.getEntries().get(0).getPassword());
+} catch (final Exception e) {
+	e.printStackTrace();
 }
 ```
