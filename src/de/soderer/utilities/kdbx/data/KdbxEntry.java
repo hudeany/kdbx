@@ -30,10 +30,13 @@ public class KdbxEntry {
 	}
 
 	public KdbxUUID getUuid() {
+		if (uuid == null) {
+			uuid = new KdbxUUID();
+		}
 		return uuid;
 	}
 
-	public KdbxEntry setTitle(final KdbxTimes title) {
+	public KdbxEntry setTitle(final String title) {
 		items.put("Title", title);
 		return this;
 	}
@@ -48,7 +51,7 @@ public class KdbxEntry {
 	}
 
 	public String getUsername() {
-		return (String) items.get("UserName");
+		return (String) items.get("Username");
 	}
 
 	public KdbxEntry setPassword(final String password) {
@@ -138,6 +141,9 @@ public class KdbxEntry {
 	}
 
 	public KdbxTimes getTimes() {
+		if (times == null) {
+			times = new KdbxTimes();
+		}
 		return times;
 	}
 

@@ -254,7 +254,15 @@ public class KdbxHeaderFormat4 extends KdbxHeaderFormat {
 	}
 
 	public KeyDerivationFunctionInfo getKeyDerivationFunctionInfo() {
+		if (keyDerivationFunctionInfo == null) {
+			keyDerivationFunctionInfo = new KeyDerivationFunctionInfoArgon();
+		}
 		return keyDerivationFunctionInfo;
+	}
+
+	public KdbxHeaderFormat4 setKeyDerivationFunctionInfo(final KeyDerivationFunctionInfo keyDerivationFunctionInfo) {
+		this.keyDerivationFunctionInfo = keyDerivationFunctionInfo;
+		return this;
 	}
 
 	public KdbxHeaderFormat4 setKdfParamsBytes(final byte[] kdfParamsBytes) throws Exception {

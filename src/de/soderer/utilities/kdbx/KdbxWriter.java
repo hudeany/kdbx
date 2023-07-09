@@ -461,7 +461,9 @@ public class KdbxWriter implements AutoCloseable {
 	private void writeEntryNode(final StreamCipher innerEncryptionCipher, final Set<String> keyNamesToEncrypt, final Version dataFormatVersion, final Node baseNode, final KdbxEntry entry) {
 		final Node entryNode = Utilities.appendNode(baseNode, "Entry");
 		Utilities.appendTextValueNode(entryNode, "UUID", formatKdbxUUIDValue(entry.getUuid()));
-		Utilities.appendTextValueNode(entryNode, "IconID", formatIntegerValue(entry.getIconID()));
+		if (entry.getIconID() != null) {
+			Utilities.appendTextValueNode(entryNode, "IconID", formatIntegerValue(entry.getIconID()));
+		}
 		Utilities.appendTextValueNode(entryNode, "ForegroundColor", entry.getForegroundColor());
 		Utilities.appendTextValueNode(entryNode, "BackgroundColor", entry.getBackgroundColor());
 		Utilities.appendTextValueNode(entryNode, "OverrideURL", entry.getOverrideURL());

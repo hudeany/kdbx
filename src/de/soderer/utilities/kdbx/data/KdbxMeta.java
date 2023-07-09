@@ -414,6 +414,9 @@ public class KdbxMeta {
 	 * Structure containing configuration of value protection
 	 */
 	public KdbxMemoryProtection getMemoryProtection() {
+		if (memoryProtection == null) {
+			memoryProtection = new KdbxMemoryProtection();
+		}
 		return memoryProtection;
 	}
 

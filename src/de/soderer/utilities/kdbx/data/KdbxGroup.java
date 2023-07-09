@@ -40,6 +40,9 @@ public class KdbxGroup {
 	}
 
 	public KdbxUUID getUuid() {
+		if (uuid == null) {
+			uuid = new KdbxUUID();
+		}
 		return uuid;
 	}
 
@@ -55,6 +58,9 @@ public class KdbxGroup {
 	 * KDBX times of this group
 	 */
 	public KdbxTimes getTimes() {
+		if (times == null) {
+			times = new KdbxTimes();
+		}
 		return times;
 	}
 

@@ -1,5 +1,6 @@
 package de.soderer.utilities.kdbx.data;
 
+import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Base64;
 
@@ -7,6 +8,11 @@ import de.soderer.utilities.kdbx.util.Utilities;
 
 public class KdbxUUID {
 	private final byte[] data;
+
+	public KdbxUUID() {
+		data = new byte[16];
+		new SecureRandom().nextBytes(data);
+	}
 
 	public KdbxUUID(final byte[] data) {
 		if (data == null) {

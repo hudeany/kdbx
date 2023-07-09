@@ -3,7 +3,7 @@ package de.soderer.utilities.kdbx.data;
 public class KdbxMemoryProtection {
 	private boolean protectTitle;
 	private boolean protectUserName;
-	private boolean protectPassword;
+	private boolean protectPassword = true;
 	private boolean protectURL;
 	private boolean protectNotes;
 
