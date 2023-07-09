@@ -1,9 +1,12 @@
 # kdbx
 Java Kdbx File Format Reader and Writer (KeePass2 file format)
 
-Release 1.0.0:
+Release 2.0.0:
+- Binary Attachment support
+- Improved internal header data storage
 
-**KdbxWriter and -Reader for Dataversion 3.x && 4.x is now working and created kdbx files are read by the KeePass2 application without errors.**
+Release 1.0.0:
+- KdbxWriter and -Reader for Dataversion 3.x && 4.x is now working and created kdbx files are read by the KeePass2 application without errors.
 
 ## Dependencies:
 - JAVA 8
@@ -32,30 +35,30 @@ Release 1.0.0:
 ### KdbxReader example with simple password:
 ```java
 try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDatabase.kdbx"))) {
-  final KdbxDatabase database = kdbxReader.readKdbxDatabase("MyPassword".toCharArray());
-  System.out.println("Databasename: " + database.getMeta().getDatabaseName()));
-  System.out.println("Number of groups on first level: " + database.getGroups().size());
-  System.out.println("Groupname: " + database.getGroups().get(0).getName());
-  System.out.println("Number of groups within other group: " + database.getGroups().get(0).getGroups().size());
-  System.out.println("Groupname of deeper group: " + database.getGroups().get(0).getGroups().get(0).getName());
-  System.out.println("Overall number of stored entries: " + database.getAllEntries().size());
-  System.out.println("Username of entry: " + database.getEntryByUUID(database.getGroups().get(0).getEntries().get(0)).getUsername());
-  System.out.println("Password of entry: " + database.getEntryByUUID(database.getGroups().get(0).getEntries().get(0)).getPassword());
-  System.out.println("Password of special entry: " + database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
+	final KdbxDatabase database = kdbxReader.readKdbxDatabase("MyPassword".toCharArray());
+	System.out.println("Databasename: " + database.getMeta().getDatabaseName()));
+	System.out.println("Number of groups on first level: " + database.getGroups().size());
+	System.out.println("Groupname: " + database.getGroups().get(0).getName());
+	System.out.println("Number of groups within other group: " + database.getGroups().get(0).getGroups().size());
+	System.out.println("Groupname of deeper group: " + database.getGroups().get(0).getGroups().get(0).getName());
+	System.out.println("Overall number of stored entries: " + database.getAllEntries().size());
+	System.out.println("Username of entry: " + database.getEntryByUUID(database.getGroups().get(0).getEntries().get(0)).getUsername());
+	System.out.println("Password of entry: " + database.getEntryByUUID(database.getGroups().get(0).getEntries().get(0)).getPassword());
+	System.out.println("Password of special entry: " + database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
 } catch (final Exception e) {
-  e.printStackTrace();
+	e.printStackTrace();
 }
 ```
 
 ### KdbxReader example with password and keyfile:
 ```java
 try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDatabase.kdbx"))) {
-  final byte[] keyFileData = Utilities.toByteArray(new FileInputStream("MyKeePassKeyFile.keyx"));
-  final KdbxCredentials credentials = new KdbxCredentials("MyPassword".toCharArray(), keyFileData);
-  final KdbxDatabase database = kdbxReader.readKdbxDatabase(credentials);
-  System.out.println("Overall number of stored entries: " + database.getAllEntries().size());
+	final byte[] keyFileData = Utilities.toByteArray(new FileInputStream("MyKeePassKeyFile.keyx"));
+	final KdbxCredentials credentials = new KdbxCredentials("MyPassword".toCharArray(), keyFileData);
+	final KdbxDatabase database = kdbxReader.readKdbxDatabase(credentials);
+	System.out.println("Overall number of stored entries: " + database.getAllEntries().size());
 } catch (final Exception e) {
-  e.printStackTrace();
+	e.printStackTrace();
 }
 ```
 
@@ -77,7 +80,7 @@ try (KdbxWriter kdbxWriter = new KdbxWriter(new FileOutputStream("MyKeePassDatab
 	e.printStackTrace();
 }
 
-try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDatabase.kdbx")).setStrictMode(true)) {
+try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDatabase.kdbx"))) {
 	database = kdbxReader.readKdbxDatabase("MyDatabasePassword".toCharArray());
 	System.out.println(database.getHeaderFormat().getDataFormatVersion().toString());
 	System.out.println(database.getMeta().getDatabaseName());
