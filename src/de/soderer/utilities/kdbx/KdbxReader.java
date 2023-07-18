@@ -656,25 +656,25 @@ public class KdbxReader implements AutoCloseable {
 	}
 
 	private KdbxTimes readKdbxTimes(final Version dataFormatVersion, final Node timesNode) throws Exception {
-		final KdbxTimes group = new KdbxTimes();
+		final KdbxTimes times = new KdbxTimes();
 		final NodeList childNodes = timesNode.getChildNodes();
 		for (int i = 0; i < childNodes.getLength(); i++) {
 			final Node childNode = childNodes.item(i);
 			if (childNode.getNodeType() != Node.TEXT_NODE) {
 				if ("CreationTime".equals(childNode.getNodeName())) {
-					group.setCreationTime(parseDateTimeValue(dataFormatVersion, childNode));
+					times.setCreationTime(parseDateTimeValue(dataFormatVersion, childNode));
 				} else if ("LastModificationTime".equals(childNode.getNodeName())) {
-					group.setLastModificationTime(parseDateTimeValue(dataFormatVersion, childNode));
+					times.setLastModificationTime(parseDateTimeValue(dataFormatVersion, childNode));
 				} else if ("LastAccessTime".equals(childNode.getNodeName())) {
-					group.setLastAccessTime(parseDateTimeValue(dataFormatVersion, childNode));
+					times.setLastAccessTime(parseDateTimeValue(dataFormatVersion, childNode));
 				} else if ("ExpiryTime".equals(childNode.getNodeName())) {
-					group.setExpiryTime(parseDateTimeValue(dataFormatVersion, childNode));
+					times.setExpiryTime(parseDateTimeValue(dataFormatVersion, childNode));
 				} else if ("Expires".equals(childNode.getNodeName())) {
-					group.setExpires(parseBooleanValue(childNode));
+					times.setExpires(parseBooleanValue(childNode));
 				} else if ("UsageCount".equals(childNode.getNodeName())) {
-					group.setUsageCount(parseIntegerValue(childNode));
+					times.setUsageCount(parseIntegerValue(childNode));
 				} else if ("LocationChanged".equals(childNode.getNodeName())) {
-					group.setLocationChanged(parseDateTimeValue(dataFormatVersion, childNode));
+					times.setLocationChanged(parseDateTimeValue(dataFormatVersion, childNode));
 				} else {
 					if (strictMode) {
 						throw new Exception("Unexpected times data node name: " + childNode.getNodeName());
@@ -682,7 +682,7 @@ public class KdbxReader implements AutoCloseable {
 				}
 			}
 		}
-		return group;
+		return times;
 	}
 
 	private KdbxEntry readEntry(final Version dataFormatVersion, final Node entryNode) throws Exception {

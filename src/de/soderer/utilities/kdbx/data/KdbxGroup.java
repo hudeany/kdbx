@@ -6,7 +6,7 @@ import java.util.List;
 public class KdbxGroup {
 	public String name;
 	public KdbxUUID uuid;
-	public KdbxTimes times;
+	private KdbxTimes times = new KdbxTimes();
 	public String notes;
 	public Integer iconID;
 	public KdbxUUID customIconUuid;
@@ -50,17 +50,18 @@ public class KdbxGroup {
 	 * KDBX times of this group
 	 */
 	public KdbxGroup setTimes(final KdbxTimes times) {
-		this.times = times;
-		return this;
+		if (times == null) {
+			throw new IllegalArgumentException("Group's times may not be null");
+		} else {
+			this.times = times;
+			return this;
+		}
 	}
 
 	/**
 	 * KDBX times of this group
 	 */
 	public KdbxTimes getTimes() {
-		if (times == null) {
-			times = new KdbxTimes();
-		}
 		return times;
 	}
 

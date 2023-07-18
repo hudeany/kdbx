@@ -272,6 +272,9 @@ public class KdbxMeta {
 	 */
 	public KdbxMeta setRecycleBinEnabled(final boolean recycleBinEnabled) {
 		this.recycleBinEnabled = recycleBinEnabled;
+		if (recycleBinEnabled && recycleBinUUID == null) {
+			recycleBinUUID = new KdbxUUID();
+		}
 		return this;
 	}
 

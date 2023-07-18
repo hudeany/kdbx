@@ -13,7 +13,7 @@ public class KdbxEntry {
 	private String backgroundColor;
 	private String overrideURL;
 	private String tags;
-	private KdbxTimes times;
+	private KdbxTimes times = new KdbxTimes();
 	private Map<String, Object> items = new LinkedHashMap<>();
 	private boolean autoTypeEnabled = false;
 	private String autoTypeDataTransferObfuscation;
@@ -136,14 +136,15 @@ public class KdbxEntry {
 	}
 
 	public KdbxEntry setTimes(final KdbxTimes times) {
-		this.times = times;
-		return this;
+		if (times == null) {
+			throw new IllegalArgumentException("Entry's times may not be null");
+		} else {
+			this.times = times;
+			return this;
+		}
 	}
 
 	public KdbxTimes getTimes() {
-		if (times == null) {
-			times = new KdbxTimes();
-		}
 		return times;
 	}
 

@@ -55,9 +55,13 @@ public class KdbxDatabase {
 		return binaryAttachments;
 	}
 
-	public KdbxDatabase setMeta(final KdbxMeta kdbxMeta) {
-		meta = kdbxMeta;
-		return this;
+	public KdbxDatabase setMeta(final KdbxMeta meta) {
+		if (meta == null) {
+			throw new IllegalArgumentException("Database's meta may not be null");
+		} else {
+			this.meta = meta;
+			return this;
+		}
 	}
 
 	public KdbxMeta getMeta() {

@@ -99,6 +99,8 @@ public class KdbxWriter implements AutoCloseable {
 	public void writeKdbxDatabase(final KdbxDatabase database, KdbxHeaderFormat headerFormat, final KdbxCredentials credentials) throws Exception {
 		database.validate();
 
+		database.getMeta().setMasterKeyChanged(ZonedDateTime.now());
+
 		if (headerFormat == null) {
 			headerFormat = new KdbxHeaderFormat4();
 		}
