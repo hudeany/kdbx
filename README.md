@@ -74,6 +74,7 @@ kdbxEntry.setUsername("MyUsernameForThisEntry");
 kdbxEntry.setPassword("MyPasswordForThisEntry");
 database.getEntries().add(kdbxEntry);
 
+// KDBX default data version v4
 try (KdbxWriter kdbxWriter = new KdbxWriter(new FileOutputStream("MyKeePassDatabase.kdbx"))) {
 	kdbxWriter.writeKdbxDatabase(database, "MyDatabasePassword".toCharArray());
 } catch (final Exception e) {
@@ -81,6 +82,28 @@ try (KdbxWriter kdbxWriter = new KdbxWriter(new FileOutputStream("MyKeePassDatab
 }
 
 try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDatabase.kdbx"))) {
+	database = kdbxReader.readKdbxDatabase("MyDatabasePassword".toCharArray());
+	System.out.println(database.getHeaderFormat().getDataFormatVersion().toString());
+	System.out.println(database.getMeta().getDatabaseName());
+	System.out.println(database.getAllEntries().size());
+	System.out.println(database.getEntries().get(0).getTitle());
+	System.out.println(database.getEntries().get(0).getUrl());
+	System.out.println(database.getEntries().get(0).getUsername());
+	System.out.println(database.getEntries().get(0).getPassword());
+} catch (final Exception e) {
+	e.printStackTrace();
+}
+
+// KDBX data version v3
+try (KdbxWriter kdbxWriter = new KdbxWriter(new FileOutputStream("MyKeePassDatabase_v3.kdbx"))) {
+	KdbxHeaderFormat headerFormat = new KdbxHeaderFormat3();
+	headerFormat.setInnerEncryptionAlgorithm(InnerEncryptionAlgorithm.SALSA20);
+	kdbxWriter.writeKdbxDatabase(database, headerFormat, "MyDatabasePassword".toCharArray());
+} catch (final Exception e) {
+	e.printStackTrace();
+}
+
+try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDatabase_v3.kdbx"))) {
 	database = kdbxReader.readKdbxDatabase("MyDatabasePassword".toCharArray());
 	System.out.println(database.getHeaderFormat().getDataFormatVersion().toString());
 	System.out.println(database.getMeta().getDatabaseName());
