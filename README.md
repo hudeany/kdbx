@@ -115,6 +115,7 @@ try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDataba
 } catch (final Exception e) {
 	e.printStackTrace();
 }
+```
 
 ## Maven2 repository
 This library is also available via Maven2 repository
