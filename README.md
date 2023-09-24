@@ -115,4 +115,19 @@ try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDataba
 } catch (final Exception e) {
 	e.printStackTrace();
 }
-```
+
+## Maven2 repository
+This library is also available via Maven2 repository
+ 
+	<repositories>
+		<repository>
+			<id>de.soderer</id>
+			<url>http://soderer.de/maven2</url>
+		</repository>
+	</repositories>
+
+	<dependency>
+		<groupId>de.soderer</groupId>
+		<artifactId>kdbx</artifactId>
+		<version>RELEASE</version>
+	</dependency>
