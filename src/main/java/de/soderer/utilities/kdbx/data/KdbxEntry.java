@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
 
 public class KdbxEntry {
 	private KdbxUUID uuid;
@@ -46,12 +48,12 @@ public class KdbxEntry {
 	}
 
 	public KdbxEntry setUsername(final String username) {
-		items.put("Username", username);
+		items.put("UserName", username);
 		return this;
 	}
 
 	public String getUsername() {
-		return (String) items.get("Username");
+		return (String) items.get("UserName");
 	}
 
 	public KdbxEntry setPassword(final String password) {
@@ -64,12 +66,12 @@ public class KdbxEntry {
 	}
 
 	public KdbxEntry setUrl(final String url) {
-		items.put("Url", url);
+		items.put("URL", url);
 		return this;
 	}
 
 	public String getUrl() {
-		return (String) items.get("Url");
+		return (String) items.get("URL");
 	}
 
 	public KdbxEntry setNotes(final String notes) {
@@ -216,5 +218,148 @@ public class KdbxEntry {
 
 	public List<KdbxEntryBinary> getBinaries() {
 		return binaries;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(autoTypeAssociationKeystrokeSequence, autoTypeAssociationWindow, autoTypeDataTransferObfuscation, autoTypeDefaultSequence, autoTypeEnabled,
+				backgroundColor, binaries, customData, customIconUuid, foregroundColor, history, iconID, items, overrideURL, tags, times, uuid);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		} else if (obj == null) {
+			return false;
+		} else if (getClass() != obj.getClass()) {
+			return false;
+		} else {
+			KdbxEntry other = (KdbxEntry) obj;
+			return Objects.equals(autoTypeAssociationKeystrokeSequence, other.autoTypeAssociationKeystrokeSequence)
+					&& Objects.equals(autoTypeAssociationWindow, other.autoTypeAssociationWindow)
+					&& Objects.equals(autoTypeDataTransferObfuscation, other.autoTypeDataTransferObfuscation)
+					&& Objects.equals(autoTypeDefaultSequence, other.autoTypeDefaultSequence)
+					&& autoTypeEnabled == other.autoTypeEnabled
+					&& Objects.equals(backgroundColor, other.backgroundColor)
+					&& Objects.equals(binaries, other.binaries)
+					&& Objects.equals(customData, other.customData)
+					&& Objects.equals(customIconUuid, other.customIconUuid)
+					&& Objects.equals(foregroundColor, other.foregroundColor)
+					&& Objects.equals(history, other.history)
+					&& Objects.equals(iconID, other.iconID)
+					&& Objects.equals(items, other.items)
+					&& Objects.equals(overrideURL, other.overrideURL)
+					&& Objects.equals(tags, other.tags)
+					&& Objects.equals(times, other.times)
+					&& Objects.equals(uuid, other.uuid);
+		}
+	}
+
+	@Override
+	public String toString() {
+		return toString(false);
+	}
+	
+	public String toString(boolean showPassword) {
+		String returnString = "UUID: " + uuid + "\n";
+		
+		if (items.get("Title") != null) {
+			returnString += "Title: " + items.get("Title") + "\n";
+		}
+		
+		if (items.get("UserName") != null) {
+			returnString += "Username: " + items.get("UserName") + "\n";
+		}
+		
+		if (items.get("Password") != null) {
+			if (showPassword) {
+				returnString += "Password: " + items.get("Password") + "\n";
+			} else {
+				returnString += "Password: ***\n";
+			}
+		}
+		
+		if (items.get("URL") != null) {
+			returnString += "URL: " + items.get("URL") + "\n";
+		}
+		
+		if (items.get("Notes") != null) {
+			returnString += "Notes: " + items.get("Notes") + "\n";
+		}
+		
+		if (times.getCreationTime() != null) {
+			returnString += "Created: " + times.getCreationTime() + "\n";
+		}
+		
+		if (times.getLastModificationTime() != null) {
+			returnString += "Changed: " + times.getLastModificationTime() + "\n";
+		}
+		
+		for (Entry<String, Object> itemEntry : items.entrySet()) {
+			if (!"Title".equals(itemEntry.getKey()) && !"UserName".equals(itemEntry.getKey()) && !"Password".equals(itemEntry.getKey())
+					&& !"URL".equals(itemEntry.getKey()) && !"Notes".equals(itemEntry.getKey())) {
+				returnString += itemEntry.getKey() + ": " + itemEntry.getValue() + "\n";
+			}
+		}
+		
+		if (iconID != null && iconID > 0) {
+			returnString += "IconID: " + iconID + "\n";
+		}
+		
+		if (customIconUuid != null) {
+			returnString += "CustomIconUuid: " + customIconUuid + "\n";
+		}
+		
+		if (foregroundColor != null) {
+			returnString += "ForegroundColor: " + foregroundColor + "\n";
+		}
+		
+		if (backgroundColor != null) {
+			returnString += "BackgroundColor: " + backgroundColor + "\n";
+		}
+		
+		if (overrideURL != null) {
+			returnString += "OverrideURL: " + overrideURL + "\n";
+		}
+		
+		if (tags != null) {
+			returnString += "Tags: " + tags + "\n";
+		}
+		
+		
+		if (autoTypeEnabled) {
+			returnString += "AutoTypeEnabled: " + autoTypeEnabled + "\n";
+		}
+		
+		if (autoTypeDataTransferObfuscation != null) {
+			returnString += "AutoTypeDataTransferObfuscation: " + autoTypeDataTransferObfuscation + "\n";
+		}
+		
+		if (autoTypeDefaultSequence != null) {
+			returnString += "AutoTypeDefaultSequence: " + autoTypeDefaultSequence + "\n";
+		}
+		
+		if (autoTypeAssociationWindow != null) {
+			returnString += "AutoTypeAssociationWindow: " + autoTypeAssociationWindow + "\n";
+		}
+		
+		if (autoTypeAssociationKeystrokeSequence != null) {
+			returnString += "AutoTypeAssociationKeystrokeSequence: " + autoTypeAssociationKeystrokeSequence + "\n";
+		}
+		
+		if (customData != null && customData.size() > 0) {
+			returnString += "CustomData size: " + customData.size() + "\n";
+		}
+		
+		if (history != null && history.size() > 0) {
+			returnString += "History size: " + history.size() + "\n";
+		}
+		
+		if (binaries != null && binaries.size() > 0) {
+			returnString += "Binaries size: " + binaries.size() + "\n";
+		}
+		
+		return returnString;
 	}
 }

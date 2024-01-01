@@ -1,6 +1,7 @@
 package de.soderer.utilities.kdbx.data;
 
 import java.time.ZonedDateTime;
+import java.util.Objects;
 
 public class KdbxTimes {
 	public ZonedDateTime lastModificationTime;
@@ -77,5 +78,40 @@ public class KdbxTimes {
 	public KdbxTimes setLocationChanged(final ZonedDateTime locationChanged) {
 		this.locationChanged = locationChanged;
 		return this;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(creationTime, expires, expiryTime, lastAccessTime, lastModificationTime, locationChanged, usageCount);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		} else if (obj == null) {
+			return false;
+		} else if (getClass() != obj.getClass()) {
+			return false;
+		} else {
+			KdbxTimes other = (KdbxTimes) obj;
+			return expires == other.expires
+					&& usageCount == other.usageCount
+					&& timeEquals(creationTime, other.creationTime)
+					&& timeEquals(expiryTime, other.expiryTime)
+					&& timeEquals(lastAccessTime, other.lastAccessTime)
+					&& timeEquals(lastModificationTime, other.lastModificationTime)
+					&& timeEquals(locationChanged, other.locationChanged);
+		}
+	}
+
+	private boolean timeEquals(ZonedDateTime zonedDateTime1, ZonedDateTime zonedDateTime2) {
+		if (zonedDateTime1 == zonedDateTime2) {
+			return true;
+		} else if (zonedDateTime1 == null || zonedDateTime2 == null) {
+			return false;
+		} else {
+			return zonedDateTime1.isEqual(zonedDateTime2);
+		}
 	}
 }
