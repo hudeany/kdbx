@@ -2,6 +2,7 @@ package de.soderer.utilities.kdbx;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 import org.junit.Assert;
@@ -18,7 +19,9 @@ public class KdbxReaderTest {
 	public void test_AES256_AESKDF_GZIP() {
 		KdbxDatabase database = null;
 
-		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF.kdbx")).setStrictMode(true)) {
+		try (InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF.kdbx");
+				KdbxReader kdbxReader = new KdbxReader(resourceAsStream)) {
+			kdbxReader.setStrictMode(true);
 			database = kdbxReader.readKdbxDatabase("Äbc123@".toCharArray());
 
 			Assert.assertEquals("4.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
@@ -55,7 +58,8 @@ public class KdbxReaderTest {
 
 		Assert.assertTrue(outputStream.size() > 0);
 
-		try (KdbxReader kdbxReader = new KdbxReader(new ByteArrayInputStream(outputStream.toByteArray())).setStrictMode(true)) {
+		try (KdbxReader kdbxReader = new KdbxReader(new ByteArrayInputStream(outputStream.toByteArray()))) {
+			kdbxReader.setStrictMode(true);
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray());
 			database = kdbxReader.readKdbxDatabase(credentials);
 
@@ -80,7 +84,8 @@ public class KdbxReaderTest {
 
 	@Test
 	public void test_ChaCha20_Argon2d_GZIP() {
-		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_ChaCha20_Argon2d.kdbx")).setStrictMode(true)) {
+		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_ChaCha20_Argon2d.kdbx"))) {
+			kdbxReader.setStrictMode(true);
 			final KdbxDatabase database = kdbxReader.readKdbxDatabase("Äbc123@".toCharArray());
 			Assert.assertEquals("Test Database", database.getMeta().getDatabaseName());
 
@@ -101,7 +106,8 @@ public class KdbxReaderTest {
 
 	@Test
 	public void test_ChaCha20_Argon2id_GZIP() {
-		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_ChaCha20_Argon2id.kdbx")).setStrictMode(true)) {
+		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_ChaCha20_Argon2id.kdbx"))) {
+			kdbxReader.setStrictMode(true);
 			final KdbxDatabase database = kdbxReader.readKdbxDatabase("Äbc123@".toCharArray());
 			Assert.assertEquals("Test Database", database.getMeta().getDatabaseName());
 
@@ -121,7 +127,8 @@ public class KdbxReaderTest {
 	}
 	@Test
 	public void test_AES256_AESKDF_NoZIP() {
-		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_NoZip.kdbx")).setStrictMode(true)) {
+		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_NoZip.kdbx"))) {
+			kdbxReader.setStrictMode(true);
 			final KdbxDatabase database = kdbxReader.readKdbxDatabase("Äbc123@".toCharArray());
 			Assert.assertEquals("Test Database", database.getMeta().getDatabaseName());
 
@@ -142,7 +149,8 @@ public class KdbxReaderTest {
 
 	@Test
 	public void test_AES256_AESKDF_PwdAndTxtKeyFile_GZIP() {
-		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_PwdTxtKeyFile.kdbx")).setStrictMode(true)) {
+		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_PwdTxtKeyFile.kdbx"))) {
+			kdbxReader.setStrictMode(true);
 			final byte[] keyFileData = IoUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_PwdTxtKeyFile.txt"));
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray(), keyFileData);
 			final KdbxDatabase database = kdbxReader.readKdbxDatabase(credentials);
@@ -165,7 +173,8 @@ public class KdbxReaderTest {
 
 	@Test
 	public void test_AES256_AESKDF_PwdAndKeyFileV1_GZIP() {
-		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_PwdKeyFileV1.kdbx")).setStrictMode(true)) {
+		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_PwdKeyFileV1.kdbx"))) {
+			kdbxReader.setStrictMode(true);
 			final byte[] keyFileData = IoUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_PwdKeyFileV1.keyx"));
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray(), keyFileData);
 			final KdbxDatabase database = kdbxReader.readKdbxDatabase(credentials);
@@ -188,7 +197,8 @@ public class KdbxReaderTest {
 
 	@Test
 	public void test_AES256_AESKDF_PwdAndKeyFileV2_GZIP() {
-		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_PwdKeyFileV2.kdbx")).setStrictMode(true)) {
+		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_PwdKeyFileV2.kdbx"))) {
+			kdbxReader.setStrictMode(true);
 			final byte[] keyFileData = IoUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_PwdKeyFileV2.keyx"));
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray(), keyFileData);
 			final KdbxDatabase database = kdbxReader.readKdbxDatabase(credentials);
@@ -211,7 +221,8 @@ public class KdbxReaderTest {
 
 	@Test
 	public void test_AES256_AESKDF_KeyFile() {
-		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_KeyFile.kdbx")).setStrictMode(true)) {
+		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_KeyFile.kdbx"))) {
+			kdbxReader.setStrictMode(true);
 			final byte[] keyFileData = IoUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_KeyFile.keyx"));
 			final KdbxCredentials credentials = new KdbxCredentials(keyFileData);
 			final KdbxDatabase database = kdbxReader.readKdbxDatabase(credentials);
@@ -236,7 +247,8 @@ public class KdbxReaderTest {
 	public void test_v3() {
 		KdbxDatabase database = null;
 
-		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v3/Database_Salsa20.kdbx")).setStrictMode(true)) {
+		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v3/Database_Salsa20.kdbx"))) {
+			kdbxReader.setStrictMode(true);
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray());
 			database = kdbxReader.readKdbxDatabase(credentials);
 
@@ -273,7 +285,8 @@ public class KdbxReaderTest {
 
 		Assert.assertTrue(outputStream.size() > 0);
 
-		try (KdbxReader kdbxReader = new KdbxReader(new ByteArrayInputStream(outputStream.toByteArray())).setStrictMode(true)) {
+		try (KdbxReader kdbxReader = new KdbxReader(new ByteArrayInputStream(outputStream.toByteArray()))) {
+			kdbxReader.setStrictMode(true);
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray());
 			database = kdbxReader.readKdbxDatabase(credentials);
 
@@ -299,7 +312,8 @@ public class KdbxReaderTest {
 	public void test_v3_withBinaries() {
 		KdbxDatabase database = null;
 
-		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v3/Database_Salsa20_bin.kdbx")).setStrictMode(true)) {
+		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v3/Database_Salsa20_bin.kdbx"))) {
+			kdbxReader.setStrictMode(true);
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray());
 			database = kdbxReader.readKdbxDatabase(credentials);
 
@@ -337,7 +351,8 @@ public class KdbxReaderTest {
 
 		Assert.assertTrue(outputStream.size() > 0);
 
-		try (KdbxReader kdbxReader = new KdbxReader(new ByteArrayInputStream(outputStream.toByteArray())).setStrictMode(true)) {
+		try (KdbxReader kdbxReader = new KdbxReader(new ByteArrayInputStream(outputStream.toByteArray()))) {
+			kdbxReader.setStrictMode(true);
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray());
 			database = kdbxReader.readKdbxDatabase(credentials);
 
@@ -364,7 +379,8 @@ public class KdbxReaderTest {
 	public void test_v4_withBinaries() {
 		KdbxDatabase database = null;
 
-		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_bin.kdbx")).setStrictMode(true)) {
+		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_bin.kdbx"))) {
+			kdbxReader.setStrictMode(true);
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray());
 			database = kdbxReader.readKdbxDatabase(credentials);
 
@@ -402,7 +418,8 @@ public class KdbxReaderTest {
 
 		Assert.assertTrue(outputStream.size() > 0);
 
-		try (KdbxReader kdbxReader = new KdbxReader(new ByteArrayInputStream(outputStream.toByteArray())).setStrictMode(true)) {
+		try (KdbxReader kdbxReader = new KdbxReader(new ByteArrayInputStream(outputStream.toByteArray()))) {
+			kdbxReader.setStrictMode(true);
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray());
 			database = kdbxReader.readKdbxDatabase(credentials);
 
@@ -445,7 +462,8 @@ public class KdbxReaderTest {
 
 		Assert.assertTrue(outputStream.size() > 0);
 
-		try (KdbxReader kdbxReader = new KdbxReader(new ByteArrayInputStream(outputStream.toByteArray())).setStrictMode(true)) {
+		try (KdbxReader kdbxReader = new KdbxReader(new ByteArrayInputStream(outputStream.toByteArray()))) {
+			kdbxReader.setStrictMode(true);
 			final KdbxCredentials credentials = new KdbxCredentials("MyDatabasePassword".toCharArray());
 			database = kdbxReader.readKdbxDatabase(credentials);
 			Assert.assertEquals("4.1.0", database.getHeaderFormat().getDataFormatVersion().toString());

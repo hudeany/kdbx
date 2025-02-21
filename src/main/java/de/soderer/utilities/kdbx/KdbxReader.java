@@ -41,10 +41,6 @@ import de.soderer.utilities.kdbx.data.KdbxBinary;
 import de.soderer.utilities.kdbx.data.KdbxConstants.InnerEncryptionAlgorithm;
 import de.soderer.utilities.kdbx.data.KdbxConstants.OuterEncryptionAlgorithm;
 import de.soderer.utilities.kdbx.data.KdbxConstants.PayloadBlockType;
-import de.soderer.utilities.kdbx.utilities.HmacInputStream;
-import de.soderer.utilities.kdbx.utilities.TypeHashLengthValueStructure;
-import de.soderer.utilities.kdbx.utilities.Utilities;
-import de.soderer.utilities.kdbx.utilities.Version;
 import de.soderer.utilities.kdbx.data.KdbxCustomDataItem;
 import de.soderer.utilities.kdbx.data.KdbxEntry;
 import de.soderer.utilities.kdbx.data.KdbxEntryBinary;
@@ -56,6 +52,10 @@ import de.soderer.utilities.kdbx.data.KdbxMemoryProtection;
 import de.soderer.utilities.kdbx.data.KdbxMeta;
 import de.soderer.utilities.kdbx.data.KdbxTimes;
 import de.soderer.utilities.kdbx.data.KdbxUUID;
+import de.soderer.utilities.kdbx.utilities.HmacInputStream;
+import de.soderer.utilities.kdbx.utilities.TypeHashLengthValueStructure;
+import de.soderer.utilities.kdbx.utilities.Utilities;
+import de.soderer.utilities.kdbx.utilities.Version;
 
 public class KdbxReader implements AutoCloseable {
 	private boolean strictMode = false;
@@ -204,7 +204,7 @@ public class KdbxReader implements AutoCloseable {
 		return database;
 	}
 
-	private KdbxDatabase readDataFormat4(final KdbxCredentials credentials, InputStream dataInputStream, final Version dataFormatVersion, final KdbxDatabase database) throws Exception {
+	private KdbxDatabase readDataFormat4(final KdbxCredentials credentials, final InputStream dataInputStream, final Version dataFormatVersion, final KdbxDatabase database) throws Exception {
 		final Document document;
 		final KdbxHeaderFormat4 headerFormat4 = KdbxHeaderFormat4.read(dataInputStream);
 		database.setHeaderFormat(headerFormat4);
@@ -248,43 +248,39 @@ public class KdbxReader implements AutoCloseable {
 			throw new Exception("KDBX database decryption failed. Maybe the given credentials are wrong.");
 		}
 
-		dataInputStream = new HmacInputStream(dataInputStream, hmacKey);
+		try (InputStream hmacInputStream = new HmacInputStream(dataInputStream, hmacKey)) {
+			final Cipher cipher;
+			final SecretKeySpec secretKeySpec;
+			final AlgorithmParameterSpec paramSpec;
+			switch (headerFormat4.getOuterEncryptionAlgorithm()) {
+				case AES_128:
+				case AES_256:
+					cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+					secretKeySpec = new SecretKeySpec(finalKey, "AES");
+					paramSpec = new IvParameterSpec(headerFormat4.getEncryptionIV());
+					break;
+				case CHACHA20:
+					Security.addProvider(new BouncyCastleProvider());
+					cipher = Cipher.getInstance("ChaCha20");
+					secretKeySpec = new SecretKeySpec(finalKey, "ChaCha20");
+					paramSpec = new IvParameterSpec(headerFormat4.getEncryptionIV());
+					break;
+				case TWOFISH:
+					throw new IllegalArgumentException("Cipher " + headerFormat4.getOuterEncryptionAlgorithm() + " is not implemented yet");
+				default:
+					throw new IllegalArgumentException("Unknown cipher " + headerFormat4.getOuterEncryptionAlgorithm());
+			}
+			cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, paramSpec);
+			try (InputStream cipherInputStream = headerFormat4.isCompressData() ? new GZIPInputStream(new CipherInputStream(hmacInputStream, cipher)) : new CipherInputStream(hmacInputStream, cipher)) {
+				headerFormat4.readInnerHeader(cipherInputStream);
+				database.setBinaryAttachments(headerFormat4.getBinaryAttachments());
 
-		final Cipher cipher;
-		final SecretKeySpec secretKeySpec;
-		final AlgorithmParameterSpec paramSpec;
-		switch (headerFormat4.getOuterEncryptionAlgorithm()) {
-			case AES_128:
-			case AES_256:
-				cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-				secretKeySpec = new SecretKeySpec(finalKey, "AES");
-				paramSpec = new IvParameterSpec(headerFormat4.getEncryptionIV());
-				break;
-			case CHACHA20:
-				Security.addProvider(new BouncyCastleProvider());
-				cipher = Cipher.getInstance("ChaCha20");
-				secretKeySpec = new SecretKeySpec(finalKey, "ChaCha20");
-				paramSpec = new IvParameterSpec(headerFormat4.getEncryptionIV());
-				break;
-			case TWOFISH:
-				throw new IllegalArgumentException("Cipher " + headerFormat4.getOuterEncryptionAlgorithm() + " is not implemented yet");
-			default:
-				throw new IllegalArgumentException("Unknown cipher " + headerFormat4.getOuterEncryptionAlgorithm());
+				innerEncryptionCipher = createInnerEncryptionCipher(headerFormat4.getInnerEncryptionAlgorithm(), headerFormat4.getInnerEncryptionKeyBytes());
+
+				final byte[] decryptedXmlPayloadData = Utilities.toByteArray(cipherInputStream);
+				document = Utilities.parseXmlFile(decryptedXmlPayloadData);
+			}
 		}
-		cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, paramSpec);
-		dataInputStream = new CipherInputStream(dataInputStream, cipher);
-
-		if (headerFormat4.isCompressData()) {
-			dataInputStream = new GZIPInputStream(dataInputStream);
-		}
-
-		headerFormat4.readInnerHeader(dataInputStream);
-		database.setBinaryAttachments(headerFormat4.getBinaryAttachments());
-
-		innerEncryptionCipher = createInnerEncryptionCipher(headerFormat4.getInnerEncryptionAlgorithm(), headerFormat4.getInnerEncryptionKeyBytes());
-
-		final byte[] decryptedXmlPayloadData = Utilities.toByteArray(dataInputStream);
-		document = Utilities.parseXmlFile(decryptedXmlPayloadData);
 
 		final Node rootNode = document.getDocumentElement();
 		if (!"KeePassFile".equals(rootNode.getNodeName())) {

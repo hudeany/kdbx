@@ -86,7 +86,7 @@ public class KdbxTimes {
 	}
 
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (this == obj) {
 			return true;
 		} else if (obj == null) {
@@ -94,7 +94,7 @@ public class KdbxTimes {
 		} else if (getClass() != obj.getClass()) {
 			return false;
 		} else {
-			KdbxTimes other = (KdbxTimes) obj;
+			final KdbxTimes other = (KdbxTimes) obj;
 			return expires == other.expires
 					&& usageCount == other.usageCount
 					&& timeEquals(creationTime, other.creationTime)
@@ -105,7 +105,7 @@ public class KdbxTimes {
 		}
 	}
 
-	private boolean timeEquals(ZonedDateTime zonedDateTime1, ZonedDateTime zonedDateTime2) {
+	private static boolean timeEquals(final ZonedDateTime zonedDateTime1, final ZonedDateTime zonedDateTime2) {
 		if (zonedDateTime1 == zonedDateTime2) {
 			return true;
 		} else if (zonedDateTime1 == null || zonedDateTime2 == null) {

@@ -11,7 +11,7 @@ Release 1.0.0:
 ## Dependencies:
 - JAVA 11
 - Bouncy Castle Crypto Provider
-    (current version "1.70", see: "https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on" for download)
+    (current version "1.80", see: "https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk18on" for download)
 
 ## Supported encryption algorithms:
 - AES 128
