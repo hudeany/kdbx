@@ -17,6 +17,15 @@ public class KeyDerivationFunctionInfoAes implements KeyDerivationFunctionInfo {
 	private long aesTransformRounds = 60000;
 	private byte[] aesTransformSeed;
 
+	/**
+	 * Sanity upper bound for AES-KDF rounds, to protect against maliciously crafted KDBX files that
+	 * specify an excessive round count in order to force a practically unbounded CPU-bound loop
+	 * during key derivation (Denial of Service), which happens before the file's header
+	 * integrity/authenticity can be verified. This limit is generous compared to any reasonable
+	 * real-world KeePass configuration (KeePass itself typically uses values in the low millions).
+	 */
+	private static final long MAX_AES_TRANSFORM_ROUNDS = 500_000_000L;
+
 	public KdbxType getAesKdbxType() {
 		return aesKdbxType;
 	}
@@ -30,6 +39,11 @@ public class KeyDerivationFunctionInfoAes implements KeyDerivationFunctionInfo {
 	}
 
 	public KeyDerivationFunctionInfoAes setAesTransformRounds(final long aesTransformRounds) {
+		if (aesTransformRounds <= 0) {
+			throw new IllegalArgumentException("Invalid AES transform rounds value: " + aesTransformRounds);
+		} else if (aesTransformRounds > MAX_AES_TRANSFORM_ROUNDS) {
+			throw new IllegalArgumentException("AES transform rounds value " + aesTransformRounds + " exceeds maximum allowed value of " + MAX_AES_TRANSFORM_ROUNDS);
+		}
 		this.aesTransformRounds = aesTransformRounds;
 		return this;
 	}

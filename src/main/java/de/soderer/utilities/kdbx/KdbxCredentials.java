@@ -1,8 +1,10 @@
 package de.soderer.utilities.kdbx;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Base64;
+import java.util.regex.Pattern;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -96,6 +98,14 @@ public class KdbxCredentials {
 				} else {
 					throw new RuntimeException("Usupported key file version: " + version);
 				}
+			} else if (keyFileData.length == 32) {
+				// 32 raw bytes are used directly as a 256-bit cryptographic key
+				concat.write(keyFileData, 0, keyFileData.length);
+			} else if (isHexKeyFileFormat(keyFileData)) {
+				// Exactly 64 hexadecimal characters (one line, no spaces) decode to a 256-bit cryptographic key
+				final String hexString = new String(keyFileData, StandardCharsets.US_ASCII).trim();
+				final byte[] keyBytes = Utilities.fromHexString(hexString);
+				concat.write(keyBytes, 0, keyBytes.length);
 			} else {
 				final byte[] keyFileHash = MessageDigest.getInstance("SHA-256").digest(keyFileData);
 				concat.write(keyFileHash, 0, keyFileHash.length);
@@ -113,5 +123,20 @@ public class KdbxCredentials {
 
 		final byte[] compositeKeyHash = MessageDigest.getInstance("SHA-256").digest(compositeKeyBytes);
 		return compositeKeyHash;
+	}
+
+	private static final Pattern HEX_KEY_FILE_PATTERN = Pattern.compile("[0-9A-Fa-f]{64}");
+
+	/**
+	 * Detects the "64 hexadecimal characters" key file format: exactly 64 hex characters
+	 * (0-9, A-F), in ASCII/UTF-8 encoding, on a single line, with no spaces. A single trailing
+	 * newline (as commonly added by text editors) is tolerated.
+	 */
+	private static boolean isHexKeyFileFormat(final byte[] keyFileData) {
+		if (keyFileData.length < 64 || keyFileData.length > 66) {
+			return false;
+		}
+		final String candidate = new String(keyFileData, StandardCharsets.US_ASCII).trim();
+		return HEX_KEY_FILE_PATTERN.matcher(candidate).matches();
 	}
 }

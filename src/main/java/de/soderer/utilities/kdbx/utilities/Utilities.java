@@ -349,13 +349,30 @@ public class Utilities {
 
 	public static Document parseXmlFile(final byte[] xmlData) {
 		try (BufferedInputStream inputStream = new BufferedInputStream(new ByteArrayInputStream(xmlData))) {
-			final DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+			final DocumentBuilderFactory documentBuilderFactory = createHardenedDocumentBuilderFactory();
 			final DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
 			final Document document = documentBuilder.parse(inputStream);
 			return document;
 		} catch (@SuppressWarnings("unused") final Exception e) {
 			return null;
 		}
+	}
+
+	/**
+	 * Creates a DocumentBuilderFactory hardened against XML External Entity (XXE) attacks:
+	 * disables DTDs entirely, and as defense in depth also disables external general/parameter
+	 * entities and XInclude processing. This is applied to both key file XML parsing and KDBX
+	 * payload XML parsing, since both may process data that did not originate from a trusted source.
+	 */
+	private static DocumentBuilderFactory createHardenedDocumentBuilderFactory() throws ParserConfigurationException {
+		final DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+		documentBuilderFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+		documentBuilderFactory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+		documentBuilderFactory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+		documentBuilderFactory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+		documentBuilderFactory.setXIncludeAware(false);
+		documentBuilderFactory.setExpandEntityReferences(false);
+		return documentBuilderFactory;
 	}
 
 	public static String getNodeValue(final Node pNode) {

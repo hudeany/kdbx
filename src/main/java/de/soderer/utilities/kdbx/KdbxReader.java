@@ -243,7 +243,7 @@ public class KdbxReader implements AutoCloseable {
 		sha256_HMAC.init(new SecretKeySpec(headerVerificationHmacKey, "HmacSHA256"));
 		sha256_HMAC.update(headerFormat4.getHeaderBytes());
 		final byte[] actualHeaderHMAC = sha256_HMAC.doFinal();
-		if (!Arrays.equals(actualHeaderHMAC, expectedHeaderHMAC)) {
+		if (!MessageDigest.isEqual(actualHeaderHMAC, expectedHeaderHMAC)) {
 			// When SHA-256 checksum was valid, then this means, that the credentials for decryption are wrong.
 			throw new Exception("KDBX database decryption failed. Maybe the given credentials are wrong.");
 		}

@@ -33,7 +33,7 @@ public class CopyInputStream extends InputStream {
 	@Override
 	public int read() throws IOException {
 		final int readByte = baseInputStream.read();
-		if (bufferStream != null) {
+		if (readByte >= 0 && bufferStream != null) {
 			bufferStream.write(readByte);
 		}
 		return readByte;

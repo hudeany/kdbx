@@ -32,6 +32,16 @@ public class KeyDerivationFunctionInfoArgon implements KeyDerivationFunctionInfo
 	private byte[] salt;
 	private int version = 19;
 
+	/**
+	 * Sanity upper bounds for Argon2 parameters, to protect against maliciously crafted KDBX files
+	 * that specify excessive values in order to force resource exhaustion (Denial of Service) during
+	 * key derivation, which happens before the file's header integrity/authenticity can be verified.
+	 * These limits are generous compared to any reasonable real-world KeePass configuration.
+	 */
+	private static final int MAX_ITERATIONS = 1_000;
+	private static final long MAX_MEMORY_IN_BYTES = 2L * 1024 * 1024 * 1024; // 2 GB
+	private static final int MAX_PARALLELISM = 64;
+
 	public Argon2Type getType() {
 		return type;
 	}
@@ -50,6 +60,11 @@ public class KeyDerivationFunctionInfoArgon implements KeyDerivationFunctionInfo
 	}
 
 	public KeyDerivationFunctionInfoArgon setIterations(final int iterations) {
+		if (iterations <= 0) {
+			throw new IllegalArgumentException("Invalid Argon2 iterations value: " + iterations);
+		} else if (iterations > MAX_ITERATIONS) {
+			throw new IllegalArgumentException("Argon2 iterations value " + iterations + " exceeds maximum allowed value of " + MAX_ITERATIONS);
+		}
 		this.iterations = iterations;
 		return this;
 	}
@@ -59,6 +74,11 @@ public class KeyDerivationFunctionInfoArgon implements KeyDerivationFunctionInfo
 	}
 
 	public KeyDerivationFunctionInfoArgon setMemoryInBytes(final long memoryInBytes) {
+		if (memoryInBytes <= 0) {
+			throw new IllegalArgumentException("Invalid Argon2 memory value: " + memoryInBytes);
+		} else if (memoryInBytes > MAX_MEMORY_IN_BYTES) {
+			throw new IllegalArgumentException("Argon2 memory value " + memoryInBytes + " exceeds maximum allowed value of " + MAX_MEMORY_IN_BYTES + " bytes");
+		}
 		this.memoryInBytes = memoryInBytes;
 		return this;
 	}
@@ -68,6 +88,11 @@ public class KeyDerivationFunctionInfoArgon implements KeyDerivationFunctionInfo
 	}
 
 	public KeyDerivationFunctionInfoArgon setParallelism(final int parallelism) {
+		if (parallelism <= 0) {
+			throw new IllegalArgumentException("Invalid Argon2 parallelism value: " + parallelism);
+		} else if (parallelism > MAX_PARALLELISM) {
+			throw new IllegalArgumentException("Argon2 parallelism value " + parallelism + " exceeds maximum allowed value of " + MAX_PARALLELISM);
+		}
 		this.parallelism = parallelism;
 		return this;
 	}

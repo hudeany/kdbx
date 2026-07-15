@@ -1,5 +1,6 @@
 package de.soderer.utilities.kdbx.utilities;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -10,6 +11,13 @@ import java.util.Map.Entry;
 
 public class VariantDictionary extends LinkedHashMap<String, VariantDictionaryEntry> {
 	private static final long serialVersionUID = 267135612072510235L;
+
+	/**
+	 * Sanity upper bound for a single key or value entry, since VariantDictionary is used for small
+	 * KDF parameters only. Protects against maliciously crafted length fields forcing huge allocations
+	 * before any authentication of the file has taken place (Denial of Service protection).
+	 */
+	private static final int MAX_ENTRY_LENGTH = 1024 * 1024; // 1 MB
 
 	/**
 	 * A little-endian system stores the least-significant byte at the smallest address.
@@ -56,7 +64,7 @@ public class VariantDictionary extends LinkedHashMap<String, VariantDictionaryEn
 
 	public static VariantDictionary read(final InputStream inputStream) throws Exception {
 		final byte[] versionBytes = new byte[2];
-		inputStream.read(versionBytes);
+		readFully(inputStream, versionBytes, "VariantDictionary version bytes");
 		if (!Arrays.equals(versionBytes, VERSION)) {
 			throw new IOException("Unsupported VariantDictionary version " + Utilities.toHexString(versionBytes) + ", expected " + Utilities.toHexString(VERSION));
 		}
@@ -65,16 +73,41 @@ public class VariantDictionary extends LinkedHashMap<String, VariantDictionaryEn
 		VariantDictionaryEntry.Type type;
 		while ((type = VariantDictionaryEntry.Type.fromTypeId(inputStream.read())) != VariantDictionaryEntry.Type.END) {
 			final int keyLen = Utilities.readLittleEndianIntFromStream(inputStream);
+			checkLength(keyLen, "key");
 			final byte[] keyByteBuffer = new byte[keyLen];
-			inputStream.read(keyByteBuffer);
+			readFully(inputStream, keyByteBuffer, "VariantDictionary key data");
 			final String key = new String(keyByteBuffer, StandardCharsets.UTF_8);
 
 			final int valueLen = Utilities.readLittleEndianIntFromStream(inputStream);
+			checkLength(valueLen, "value");
 			final byte[] valueByteBuffer = new byte[valueLen];
-			inputStream.read(valueByteBuffer);
+			readFully(inputStream, valueByteBuffer, "VariantDictionary value data");
 
 			variantDictionary.put(key, new VariantDictionaryEntry(type, valueByteBuffer));
 		}
 		return variantDictionary;
+	}
+
+	private static void checkLength(final int length, final String fieldName) throws IOException {
+		if (length < 0) {
+			throw new IOException("Invalid negative VariantDictionary " + fieldName + " length: " + length);
+		} else if (length > MAX_ENTRY_LENGTH) {
+			throw new IOException("VariantDictionary " + fieldName + " length " + length + " exceeds maximum allowed size of " + MAX_ENTRY_LENGTH + " bytes");
+		}
+	}
+
+	/**
+	 * Read exactly data.length bytes, looping over the underlying stream as needed, since a single
+	 * InputStream#read(byte[]) call is not guaranteed to fill the buffer even before EOF is reached.
+	 */
+	private static void readFully(final InputStream inputStream, final byte[] data, final String description) throws IOException {
+		int totalBytesRead = 0;
+		while (totalBytesRead < data.length) {
+			final int bytesRead = inputStream.read(data, totalBytesRead, data.length - totalBytesRead);
+			if (bytesRead < 0) {
+				throw new EOFException("Cannot read " + description + ": premature end of stream after " + totalBytesRead + " bytes");
+			}
+			totalBytesRead += bytesRead;
+		}
 	}
 }

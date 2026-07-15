@@ -1,11 +1,18 @@
 package de.soderer.utilities.kdbx.utilities;
 
+import java.io.EOFException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.MessageDigest;
-import java.util.Arrays;
 
 public class TypeHashLengthValueStructure {
+	/**
+	 * Sanity upper bound for a single payload block, to protect against maliciously crafted
+	 * length values that could otherwise force huge memory allocations (Denial of Service protection).
+	 */
+	private static final int MAX_DATA_LENGTH = 64 * 1024 * 1024; // 64 MB
+
 	int typeId;
 	byte[] hash;
 	byte[] data;
@@ -48,28 +55,42 @@ public class TypeHashLengthValueStructure {
 		final int typeId = Utilities.readLittleEndianIntFromStream(inputStream);
 
 		final byte[] expectedHash = new byte[digest.getDigestLength()];
-		final int readBytes = inputStream.read(expectedHash);
-		if (readBytes != expectedHash.length) {
-			throw new Exception("Cannot read hash value: premature end of data");
-		}
+		readFully(inputStream, expectedHash, "hash value");
 
 		final int dataLength = Utilities.readLittleEndianIntFromStream(inputStream);
+		if (dataLength < 0) {
+			throw new Exception("Invalid negative TypeHashLengthValueStructure data length: " + dataLength);
+		} else if (dataLength > MAX_DATA_LENGTH) {
+			throw new Exception("TypeHashLengthValueStructure data length " + dataLength + " exceeds maximum allowed size of " + MAX_DATA_LENGTH + " bytes");
+		}
 		final byte[] data;
 		if (dataLength > 0) {
 			data = new byte[dataLength];
-			final int bytesRead = inputStream.read(data);
-			if (bytesRead != dataLength) {
-				throw new Exception("Cannot read TypeLengthValueStructure data of expected length: " + dataLength);
-			}
+			readFully(inputStream, data, "TypeLengthValueStructure data of expected length: " + dataLength);
 		} else {
 			data = new byte[0];
 		}
 
 		final byte[] generatedHash = digest.digest(data);
-		if (dataLength > 0 && !Arrays.equals(expectedHash, generatedHash)) {
+		if (dataLength > 0 && !MessageDigest.isEqual(expectedHash, generatedHash)) {
 			throw new RuntimeException("Checksum failure");
 		} else {
 			return new TypeHashLengthValueStructure(typeId, expectedHash, data);
+		}
+	}
+
+	/**
+	 * Read exactly data.length bytes, looping over the underlying stream as needed, since a single
+	 * InputStream#read(byte[]) call is not guaranteed to fill the buffer even before EOF is reached.
+	 */
+	private static void readFully(final InputStream inputStream, final byte[] data, final String description) throws IOException {
+		int totalBytesRead = 0;
+		while (totalBytesRead < data.length) {
+			final int bytesRead = inputStream.read(data, totalBytesRead, data.length - totalBytesRead);
+			if (bytesRead < 0) {
+				throw new EOFException("Cannot read " + description + ": premature end of stream after " + totalBytesRead + " bytes");
+			}
+			totalBytesRead += bytesRead;
 		}
 	}
 }

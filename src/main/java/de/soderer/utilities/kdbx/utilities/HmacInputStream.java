@@ -8,7 +8,6 @@ import java.nio.ByteOrder;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -30,6 +29,12 @@ public class HmacInputStream extends InputStream {
 	private long hmacBlockIndex;
 	private boolean eof;
 	private ByteArrayInputStream bufferStream;
+
+	/**
+	 * Sanity upper bound for a single HMAC block, to protect against maliciously crafted block size
+	 * values forcing huge allocations before the block's HMAC has actually been verified.
+	 */
+	private static final int MAX_BLOCK_SIZE = 64 * 1024 * 1024; // 64 MB
 
 	public HmacInputStream(final InputStream inputStream, final byte[] key) {
 		if (inputStream == null) {
@@ -168,6 +173,8 @@ public class HmacInputStream extends InputStream {
 
 			if (nextBlockSize < 0) {
 				throw new IOException("Invalid HMAC block size: " + nextBlockSize);
+			} else if (nextBlockSize > MAX_BLOCK_SIZE) {
+				throw new IOException("HMAC block size " + nextBlockSize + " exceeds maximum allowed size of " + MAX_BLOCK_SIZE + " bytes");
 			}
 
 			final byte[] buffer = new byte[nextBlockSize];
@@ -200,7 +207,7 @@ public class HmacInputStream extends InputStream {
 			hmac.update(blockLengthBytes);
 			hmac.update(buffer, 0, nextBlockSize);
 			final byte[] blockHmacBytes = hmac.doFinal();
-			if (!Arrays.equals(hmacBytes, blockHmacBytes)) {
+			if (!MessageDigest.isEqual(hmacBytes, blockHmacBytes)) {
 				throw new IOException("HMAC check failed, data or hash value is corrupted at block " + hmacBlockIndex);
 			} else {
 				hmacBlockIndex++;
