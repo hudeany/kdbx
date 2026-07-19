@@ -37,8 +37,12 @@ public class KdbxMeta {
 	/**
 	 * Name of the program, which created the kdbx file
 	 */
-	public KdbxMeta setGenerator(final String generator) {
+	public void setGenerator(final String generator) {
 		this.generator = generator;
+	}
+
+	public KdbxMeta withGenerator(final String newGenerator) {
+		setGenerator(newGenerator);
 		return this;
 	}
 
@@ -54,8 +58,12 @@ public class KdbxMeta {
 	 * Only utilized in KDBX 3.1 or lower.
 	 * MAY also be present in KDBX 4.0 or higher.
 	 */
-	public KdbxMeta setHeaderHash(final String headerHash) {
+	public void setHeaderHash(final String headerHash) {
 		this.headerHash = headerHash;
+	}
+
+	public KdbxMeta withHeaderHash(final String newHeaderHash) {
+		setHeaderHash(newHeaderHash);
 		return this;
 	}
 
@@ -72,8 +80,12 @@ public class KdbxMeta {
 	 *  Datetime of change of settings or meta  data change
 	 *  May only be present in KDBX 4.0 or higher.
 	 */
-	public KdbxMeta setSettingsChanged(final ZonedDateTime settingsChanged) {
+	public void setSettingsChanged(final ZonedDateTime settingsChanged) {
 		this.settingsChanged = settingsChanged;
+	}
+
+	public KdbxMeta withSettingsChanged(final ZonedDateTime newSettingsChanged) {
+		setSettingsChanged(newSettingsChanged);
 		return this;
 	}
 
@@ -88,8 +100,12 @@ public class KdbxMeta {
 	/**
 	 * Name of the database
 	 */
-	public KdbxMeta setDatabaseName(final String databaseName) {
+	public void setDatabaseName(final String databaseName) {
 		this.databaseName = databaseName;
+	}
+
+	public KdbxMeta withDatabaseName(final String newDatabaseName) {
+		setDatabaseName(newDatabaseName);
 		return this;
 	}
 
@@ -103,8 +119,12 @@ public class KdbxMeta {
 	/**
 	 *  Datetime of database name change
 	 */
-	public KdbxMeta setDatabaseNameChanged(final ZonedDateTime databaseNameChanged) {
+	public void setDatabaseNameChanged(final ZonedDateTime databaseNameChanged) {
 		this.databaseNameChanged = databaseNameChanged;
+	}
+
+	public KdbxMeta withDatabaseNameChanged(final ZonedDateTime newDatabaseNameChanged) {
+		setDatabaseNameChanged(newDatabaseNameChanged);
 		return this;
 	}
 
@@ -118,8 +138,12 @@ public class KdbxMeta {
 	/**
 	 *  Database description
 	 */
-	public KdbxMeta setDatabaseDescription(final String databaseDescription) {
+	public void setDatabaseDescription(final String databaseDescription) {
 		this.databaseDescription = databaseDescription;
+	}
+
+	public KdbxMeta withDatabaseDescription(final String newDatabaseDescription) {
+		setDatabaseDescription(newDatabaseDescription);
 		return this;
 	}
 
@@ -133,8 +157,12 @@ public class KdbxMeta {
 	/**
 	 *  Datetime of database description change
 	 */
-	public KdbxMeta setDatabaseDescriptionChanged(final ZonedDateTime databaseDescriptionChanged) {
+	public void setDatabaseDescriptionChanged(final ZonedDateTime databaseDescriptionChanged) {
 		this.databaseDescriptionChanged = databaseDescriptionChanged;
+	}
+
+	public KdbxMeta withDatabaseDescriptionChanged(final ZonedDateTime newDatabaseDescriptionChanged) {
+		setDatabaseDescriptionChanged(newDatabaseDescriptionChanged);
 		return this;
 	}
 
@@ -148,8 +176,12 @@ public class KdbxMeta {
 	/**
 	 * Default username for new entries
 	 */
-	public KdbxMeta setDefaultUserName(final String defaultUserName) {
+	public void setDefaultUserName(final String defaultUserName) {
 		this.defaultUserName = defaultUserName;
+	}
+
+	public KdbxMeta withDefaultUserName(final String newDefaultUserName) {
+		setDefaultUserName(newDefaultUserName);
 		return this;
 	}
 
@@ -163,8 +195,12 @@ public class KdbxMeta {
 	/**
 	 *  Datetime of default username change
 	 */
-	public KdbxMeta setDefaultUserNameChanged(final ZonedDateTime defaultUserNameChanged) {
+	public void setDefaultUserNameChanged(final ZonedDateTime defaultUserNameChanged) {
 		this.defaultUserNameChanged = defaultUserNameChanged;
+	}
+
+	public KdbxMeta withDefaultUserNameChanged(final ZonedDateTime newDefaultUserNameChanged) {
+		setDefaultUserNameChanged(newDefaultUserNameChanged);
 		return this;
 	}
 
@@ -178,8 +214,12 @@ public class KdbxMeta {
 	/**
 	 * Maximum age in days of history entries
 	 */
-	public KdbxMeta setMaintenanceHistoryDays(final int maintenanceHistoryDays) {
+	public void setMaintenanceHistoryDays(final int maintenanceHistoryDays) {
 		this.maintenanceHistoryDays = maintenanceHistoryDays;
+	}
+
+	public KdbxMeta withMaintenanceHistoryDays(final int newMaintenanceHistoryDays) {
+		setMaintenanceHistoryDays(newMaintenanceHistoryDays);
 		return this;
 	}
 
@@ -194,8 +234,12 @@ public class KdbxMeta {
 	 * Color for GUI display of database
 	 * Six-digit hexadecimal RGB color code with a # prefix character
 	 */
-	public KdbxMeta setColor(final String color) {
+	public void setColor(final String color) {
 		this.color = color;
+	}
+
+	public KdbxMeta withColor(final String newColor) {
+		setColor(newColor);
 		return this;
 	}
 
@@ -210,8 +254,12 @@ public class KdbxMeta {
 	/**
 	 * Datetime of last master key change
 	 */
-	public KdbxMeta setMasterKeyChanged(final ZonedDateTime masterKeyChanged) {
+	public void setMasterKeyChanged(final ZonedDateTime masterKeyChanged) {
 		this.masterKeyChanged = masterKeyChanged;
+	}
+
+	public KdbxMeta withMasterKeyChanged(final ZonedDateTime newMasterKeyChanged) {
+		setMasterKeyChanged(newMasterKeyChanged);
 		return this;
 	}
 
@@ -225,8 +273,12 @@ public class KdbxMeta {
 	/**
 	 * Master key expiration in days for change recommendation (-1 => Unlimited)
 	 */
-	public KdbxMeta setMasterKeyChangeRec(final int masterKeyChangeRec) {
+	public void setMasterKeyChangeRec(final int masterKeyChangeRec) {
 		this.masterKeyChangeRec = masterKeyChangeRec;
+	}
+
+	public KdbxMeta withMasterKeyChangeRec(final int newMasterKeyChangeRec) {
+		setMasterKeyChangeRec(newMasterKeyChangeRec);
 		return this;
 	}
 
@@ -240,8 +292,12 @@ public class KdbxMeta {
 	/**
 	 * Master key expiration in days for forced change (-1 => Unlimited)
 	 */
-	public KdbxMeta setMasterKeyChangeForce(final int masterKeyChangeForce) {
+	public void setMasterKeyChangeForce(final int masterKeyChangeForce) {
 		this.masterKeyChangeForce = masterKeyChangeForce;
+	}
+
+	public KdbxMeta withMasterKeyChangeForce(final int newMasterKeyChangeForce) {
+		setMasterKeyChangeForce(newMasterKeyChangeForce);
 		return this;
 	}
 
@@ -255,8 +311,12 @@ public class KdbxMeta {
 	/**
 	 * Enforce master key change on next database open
 	 */
-	public KdbxMeta setMasterKeyChangeForceOnce(final boolean masterKeyChangeForceOnce) {
+	public void setMasterKeyChangeForceOnce(final boolean masterKeyChangeForceOnce) {
 		this.masterKeyChangeForceOnce = masterKeyChangeForceOnce;
+	}
+
+	public KdbxMeta withMasterKeyChangeForceOnce(final boolean newMasterKeyChangeForceOnce) {
+		setMasterKeyChangeForceOnce(newMasterKeyChangeForceOnce);
 		return this;
 	}
 
@@ -270,11 +330,15 @@ public class KdbxMeta {
 	/**
 	 * Activation state of the recycling bin
 	 */
-	public KdbxMeta setRecycleBinEnabled(final boolean recycleBinEnabled) {
+	public void setRecycleBinEnabled(final boolean recycleBinEnabled) {
 		this.recycleBinEnabled = recycleBinEnabled;
 		if (recycleBinEnabled && recycleBinUUID == null) {
 			recycleBinUUID = new KdbxUUID();
 		}
+	}
+
+	public KdbxMeta withRecycleBinEnabled(final boolean newRecycleBinEnabled) {
+		setRecycleBinEnabled(newRecycleBinEnabled);
 		return this;
 	}
 
@@ -288,8 +352,12 @@ public class KdbxMeta {
 	/**
 	 * UUID of the recycling bin group
 	 */
-	public KdbxMeta setRecycleBinUUID(final KdbxUUID recycleBinUUID) {
+	public void setRecycleBinUUID(final KdbxUUID recycleBinUUID) {
 		this.recycleBinUUID = recycleBinUUID;
+	}
+
+	public KdbxMeta withRecycleBinUUID(final KdbxUUID newRecycleBinUUID) {
+		setRecycleBinUUID(newRecycleBinUUID);
 		return this;
 	}
 
@@ -303,8 +371,12 @@ public class KdbxMeta {
 	/**
 	 * Datetime of recycling bin group change
 	 */
-	public KdbxMeta setRecycleBinChanged(final ZonedDateTime recycleBinChanged) {
+	public void setRecycleBinChanged(final ZonedDateTime recycleBinChanged) {
 		this.recycleBinChanged = recycleBinChanged;
+	}
+
+	public KdbxMeta withRecycleBinChanged(final ZonedDateTime newRecycleBinChanged) {
+		setRecycleBinChanged(newRecycleBinChanged);
 		return this;
 	}
 
@@ -318,8 +390,12 @@ public class KdbxMeta {
 	/**
 	 * UUID of the group containing entry templates
 	 */
-	public KdbxMeta setEntryTemplatesGroup(final KdbxUUID entryTemplatesGroup) {
+	public void setEntryTemplatesGroup(final KdbxUUID entryTemplatesGroup) {
 		this.entryTemplatesGroup = entryTemplatesGroup;
+	}
+
+	public KdbxMeta withEntryTemplatesGroup(final KdbxUUID newEntryTemplatesGroup) {
+		setEntryTemplatesGroup(newEntryTemplatesGroup);
 		return this;
 	}
 
@@ -333,8 +409,12 @@ public class KdbxMeta {
 	/**
 	 * Datetime of entry templates group change
 	 */
-	public KdbxMeta setEntryTemplatesGroupChanged(final ZonedDateTime entryTemplatesGroupChanged) {
+	public void setEntryTemplatesGroupChanged(final ZonedDateTime entryTemplatesGroupChanged) {
 		this.entryTemplatesGroupChanged = entryTemplatesGroupChanged;
+	}
+
+	public KdbxMeta withEntryTemplatesGroupChanged(final ZonedDateTime newEntryTemplatesGroupChanged) {
+		setEntryTemplatesGroupChanged(newEntryTemplatesGroupChanged);
 		return this;
 	}
 
@@ -348,8 +428,12 @@ public class KdbxMeta {
 	/**
 	 * Maximum number of items in the history of entries
 	 */
-	public KdbxMeta setHistoryMaxItems(final int historyMaxItems) {
+	public void setHistoryMaxItems(final int historyMaxItems) {
 		this.historyMaxItems = historyMaxItems;
+	}
+
+	public KdbxMeta withHistoryMaxItems(final int newHistoryMaxItems) {
+		setHistoryMaxItems(newHistoryMaxItems);
 		return this;
 	}
 
@@ -363,8 +447,12 @@ public class KdbxMeta {
 	/**
 	 * Maximum size in bytes of items in the history of entries
 	 */
-	public KdbxMeta setHistoryMaxSize(final int historyMaxSize) {
+	public void setHistoryMaxSize(final int historyMaxSize) {
 		this.historyMaxSize = historyMaxSize;
+	}
+
+	public KdbxMeta withHistoryMaxSize(final int newHistoryMaxSize) {
+		setHistoryMaxSize(newHistoryMaxSize);
 		return this;
 	}
 
@@ -378,8 +466,12 @@ public class KdbxMeta {
 	/**
 	 * UUID of the last selected group
 	 */
-	public KdbxMeta setLastSelectedGroup(final KdbxUUID lastSelectedGroup) {
+	public void setLastSelectedGroup(final KdbxUUID lastSelectedGroup) {
 		this.lastSelectedGroup = lastSelectedGroup;
+	}
+
+	public KdbxMeta withLastSelectedGroup(final KdbxUUID newLastSelectedGroup) {
+		setLastSelectedGroup(newLastSelectedGroup);
 		return this;
 	}
 
@@ -393,8 +485,12 @@ public class KdbxMeta {
 	/**
 	 * UUID of the last scroll visible group
 	 */
-	public KdbxMeta setLastTopVisibleGroup(final KdbxUUID lastTopVisibleGroup) {
+	public void setLastTopVisibleGroup(final KdbxUUID lastTopVisibleGroup) {
 		this.lastTopVisibleGroup = lastTopVisibleGroup;
+	}
+
+	public KdbxMeta withLastTopVisibleGroup(final KdbxUUID newLastTopVisibleGroup) {
+		setLastTopVisibleGroup(newLastTopVisibleGroup);
 		return this;
 	}
 
@@ -408,8 +504,12 @@ public class KdbxMeta {
 	/**
 	 * Structure containing configuration of value protection
 	 */
-	public KdbxMeta setMemoryProtection(final KdbxMemoryProtection memoryProtection) {
+	public void setMemoryProtection(final KdbxMemoryProtection memoryProtection) {
 		this.memoryProtection = memoryProtection;
+	}
+
+	public KdbxMeta withMemoryProtection(final KdbxMemoryProtection newMemoryProtection) {
+		setMemoryProtection(newMemoryProtection);
 		return this;
 	}
 
@@ -428,8 +528,12 @@ public class KdbxMeta {
 	 * Only utilized in KDBX 3.1 or lower.
 	 * MAY not be present in KDBX 4.0 or higher.
 	 */
-	public KdbxMeta setCustomData(final List<KdbxCustomDataItem> customData) {
+	public void setCustomData(final List<KdbxCustomDataItem> customData) {
 		this.customData = customData;
+	}
+
+	public KdbxMeta withCustomData(final List<KdbxCustomDataItem> newCustomData) {
+		setCustomData(newCustomData);
 		return this;
 	}
 
@@ -445,8 +549,12 @@ public class KdbxMeta {
 	/**
 	 * Binary data of custom configured icons
 	 */
-	public KdbxMeta setCustomIcons(final Map<KdbxUUID, byte[]> customIcons) {
+	public void setCustomIcons(final Map<KdbxUUID, byte[]> customIcons) {
 		this.customIcons = customIcons;
+	}
+
+	public KdbxMeta withCustomIcons(final Map<KdbxUUID, byte[]> newCustomIcons) {
+		setCustomIcons(newCustomIcons);
 		return this;
 	}
 

@@ -176,14 +176,18 @@ public class KdbxHeaderFormat4 extends KdbxHeaderFormat {
 		return dataFormatVersion;
 	}
 
-	public KdbxHeaderFormat4 setDataFormatVersion(final Version dataFormatVersion) {
+	public void setDataFormatVersion(final Version dataFormatVersion) {
 		headerBytes = null;
 		if (dataFormatVersion.getMajorVersionNumber() != 4) {
 			throw new IllegalArgumentException("Invalid major data version for storage format settings of version 4");
 		} else {
 			this.dataFormatVersion = dataFormatVersion;
-			return this;
 		}
+	}
+
+	public KdbxHeaderFormat4 withDataFormatVersion(final Version newDataFormatVersion) {
+		setDataFormatVersion(newDataFormatVersion);
+		return this;
 	}
 
 	@Override
@@ -191,9 +195,13 @@ public class KdbxHeaderFormat4 extends KdbxHeaderFormat {
 		return compressData;
 	}
 
-	public KdbxHeaderFormat4 setCompressData(final boolean compressData) {
+	public void setCompressData(final boolean compressData) {
 		headerBytes = null;
 		this.compressData = compressData;
+	}
+
+	public KdbxHeaderFormat4 withCompressData(final boolean newCompressData) {
+		setCompressData(newCompressData);
 		return this;
 	}
 
@@ -203,13 +211,17 @@ public class KdbxHeaderFormat4 extends KdbxHeaderFormat {
 	}
 
 	@Override
-	public KdbxHeaderFormat4 setOuterEncryptionAlgorithm(final OuterEncryptionAlgorithm outerEncryptionAlgorithm) {
+	public void setOuterEncryptionAlgorithm(final OuterEncryptionAlgorithm outerEncryptionAlgorithm) {
 		headerBytes = null;
 		if (outerEncryptionAlgorithm == null) {
 			this.outerEncryptionAlgorithm = OuterEncryptionAlgorithm.AES_256;
 		} else {
 			this.outerEncryptionAlgorithm = outerEncryptionAlgorithm;
 		}
+	}
+
+	public KdbxHeaderFormat4 withOuterEncryptionAlgorithm(final OuterEncryptionAlgorithm newOuterEncryptionAlgorithm) {
+		setOuterEncryptionAlgorithm(newOuterEncryptionAlgorithm);
 		return this;
 	}
 
@@ -219,13 +231,17 @@ public class KdbxHeaderFormat4 extends KdbxHeaderFormat {
 	}
 
 	@Override
-	public KdbxHeaderFormat4 setInnerEncryptionAlgorithm(final InnerEncryptionAlgorithm innerEncryptionAlgorithm) {
+	public void setInnerEncryptionAlgorithm(final InnerEncryptionAlgorithm innerEncryptionAlgorithm) {
 		headerBytes = null;
 		if (innerEncryptionAlgorithm == null) {
 			this.innerEncryptionAlgorithm = InnerEncryptionAlgorithm.CHACHA20;
 		} else {
 			this.innerEncryptionAlgorithm = innerEncryptionAlgorithm;
 		}
+	}
+
+	public KdbxHeaderFormat4 withInnerEncryptionAlgorithm(final InnerEncryptionAlgorithm newInnerEncryptionAlgorithm) {
+		setInnerEncryptionAlgorithm(newInnerEncryptionAlgorithm);
 		return this;
 	}
 
@@ -233,23 +249,31 @@ public class KdbxHeaderFormat4 extends KdbxHeaderFormat {
 		return masterSeed;
 	}
 
-	public KdbxHeaderFormat4 setMasterSeed(final byte[] masterSeed) {
+	public void setMasterSeed(final byte[] masterSeed) {
 		if (masterSeed.length != 32) {
 			throw new IllegalStateException("Master seed should have 32 bytes");
 		} else {
 			headerBytes = null;
 			this.masterSeed = masterSeed;
-			return this;
 		}
+	}
+
+	public KdbxHeaderFormat4 withMasterSeed(final byte[] newMasterSeed) {
+		setMasterSeed(newMasterSeed);
+		return this;
 	}
 
 	public byte[] getEncryptionIV() {
 		return encryptionIV;
 	}
 
-	public KdbxHeaderFormat4 setEncryptionIV(final byte[] encryptionIV) {
+	public void setEncryptionIV(final byte[] encryptionIV) {
 		headerBytes = null;
 		this.encryptionIV = encryptionIV;
+	}
+
+	public KdbxHeaderFormat4 withEncryptionIV(final byte[] newEncryptionIV) {
+		setEncryptionIV(newEncryptionIV);
 		return this;
 	}
 
@@ -260,27 +284,35 @@ public class KdbxHeaderFormat4 extends KdbxHeaderFormat {
 		return keyDerivationFunctionInfo;
 	}
 
-	public KdbxHeaderFormat4 setKeyDerivationFunctionInfo(final KeyDerivationFunctionInfo keyDerivationFunctionInfo) {
+	public void setKeyDerivationFunctionInfo(final KeyDerivationFunctionInfo keyDerivationFunctionInfo) {
 		this.keyDerivationFunctionInfo = keyDerivationFunctionInfo;
+	}
+
+	public KdbxHeaderFormat4 withKeyDerivationFunctionInfo(final KeyDerivationFunctionInfo newKeyDerivationFunctionInfo) {
+		setKeyDerivationFunctionInfo(newKeyDerivationFunctionInfo);
 		return this;
 	}
 
-	public KdbxHeaderFormat4 setKdfParamsBytes(final byte[] kdfParamsBytes) throws Exception {
+	public void setKdfParamsBytes(final byte[] kdfParamsBytes) throws Exception {
 		headerBytes = null;
 		final VariantDictionary variantDictionary = VariantDictionary.read(new ByteArrayInputStream(kdfParamsBytes));
 		final KeyDerivationFunction keyDerivationFunction = KeyDerivationFunction.getById((byte[]) variantDictionary.get(VariantDictionary.KDF_UUID).getJavaValue());
 		switch (keyDerivationFunction) {
 			case AES_KDBX3:
 			case AES_KDBX4:
-				keyDerivationFunctionInfo = new KeyDerivationFunctionInfoAes().setValues(variantDictionary);
+				keyDerivationFunctionInfo = new KeyDerivationFunctionInfoAes().withValues(variantDictionary);
 				break;
 			case ARGON2D:
 			case ARGON2ID:
-				keyDerivationFunctionInfo = new KeyDerivationFunctionInfoArgon().setValues(variantDictionary);
+				keyDerivationFunctionInfo = new KeyDerivationFunctionInfoArgon().withValues(variantDictionary);
 				break;
 			default:
 				throw new Exception("Unknown KeyDerivationFunction(KDF): " + keyDerivationFunction);
 		}
+	}
+
+	public KdbxHeaderFormat4 withKdfParamsBytes(final byte[] newKdfParamsBytes) throws Exception {
+		setKdfParamsBytes(newKdfParamsBytes);
 		return this;
 	}
 
@@ -288,9 +320,13 @@ public class KdbxHeaderFormat4 extends KdbxHeaderFormat {
 		return innerEncryptionKeyBytes;
 	}
 
-	public KdbxHeaderFormat4 setInnerEncryptionKeyBytes(final byte[] innerEncryptionKeyBytes) {
+	public void setInnerEncryptionKeyBytes(final byte[] innerEncryptionKeyBytes) {
 		headerBytes = null;
 		this.innerEncryptionKeyBytes = innerEncryptionKeyBytes;
+	}
+
+	public KdbxHeaderFormat4 withInnerEncryptionKeyBytes(final byte[] newInnerEncryptionKeyBytes) {
+		setInnerEncryptionKeyBytes(newInnerEncryptionKeyBytes);
 		return this;
 	}
 
@@ -298,9 +334,13 @@ public class KdbxHeaderFormat4 extends KdbxHeaderFormat {
 		return binaryAttachments;
 	}
 
-	public KdbxHeaderFormat4 setBinaryAttachments(final List<KdbxBinary> binaryAttachments) {
+	public void setBinaryAttachments(final List<KdbxBinary> binaryAttachments) {
 		headerBytes = null;
 		this.binaryAttachments = binaryAttachments;
+	}
+
+	public KdbxHeaderFormat4 withBinaryAttachments(final List<KdbxBinary> newBinaryAttachments) {
+		setBinaryAttachments(newBinaryAttachments);
 		return this;
 	}
 

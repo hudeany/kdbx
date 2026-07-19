@@ -17,8 +17,12 @@ public class KdbxEntryBinary {
 	/**
 	 * Key name of this binary. Mostly a filename
 	 */
-	public KdbxEntryBinary setKey(final String key) {
+	public void setKey(final String key) {
 		this.key = key;
+	}
+
+	public KdbxEntryBinary withKey(final String newKey) {
+		setKey(newKey);
 		return this;
 	}
 
@@ -32,9 +36,13 @@ public class KdbxEntryBinary {
 	/**
 	 * Unique id of this binary
 	 */
-	public KdbxEntryBinary setRefId(final Integer id) {
+	public void setRefId(final Integer id) {
 		compressedData = null;
 		refID = id;
+	}
+
+	public KdbxEntryBinary withRefId(final Integer newId) {
+		setRefId(newId);
 		return this;
 	}
 
@@ -55,9 +63,13 @@ public class KdbxEntryBinary {
 	/**
 	 * Data of this binary.
 	 */
-	public KdbxEntryBinary setCompressedData(final byte[] compressedData) {
+	public void setCompressedData(final byte[] compressedData) {
 		refID = null;
 		this.compressedData = compressedData;
+	}
+
+	public KdbxEntryBinary withCompressedData(final byte[] newCompressedData) {
+		setCompressedData(newCompressedData);
 		return this;
 	}
 
@@ -65,9 +77,13 @@ public class KdbxEntryBinary {
 	 * Data of this binary.
 	 * @throws Exception
 	 */
-	public KdbxEntryBinary setData(final byte[] data) throws Exception {
+	public void setData(final byte[] data) throws Exception {
 		refID = null;
 		compressedData = Utilities.gzip(data);
+	}
+
+	public KdbxEntryBinary withData(final byte[] newData) throws Exception {
+		setData(newData);
 		return this;
 	}
 }

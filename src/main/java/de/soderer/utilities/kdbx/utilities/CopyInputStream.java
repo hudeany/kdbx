@@ -17,12 +17,16 @@ public class CopyInputStream extends InputStream {
 		}
 	}
 
-	public CopyInputStream setCopyOnRead(final boolean copyOnRead) {
+	public void setCopyOnRead(final boolean copyOnRead) {
 		if (copyOnRead && bufferStream == null) {
 			bufferStream = new ByteArrayOutputStream();
 		} else {
 			bufferStream = null;
 		}
+	}
+
+	public CopyInputStream withCopyOnRead(final boolean newCopyOnRead) {
+		setCopyOnRead(newCopyOnRead);
 		return this;
 	}
 

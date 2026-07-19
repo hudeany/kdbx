@@ -79,8 +79,12 @@ public class KdbxWriter implements AutoCloseable {
 		this.outputStream = outputStream;
 	}
 
-	public KdbxWriter setAdditionalKeyNamesToEncrypt(final Set<String> additionalKeyNamesToEncrypt) {
+	public void setAdditionalKeyNamesToEncrypt(final Set<String> additionalKeyNamesToEncrypt) {
 		this.additionalKeyNamesToEncrypt = additionalKeyNamesToEncrypt;
+	}
+
+	public KdbxWriter withAdditionalKeyNamesToEncrypt(final Set<String> newAdditionalKeyNamesToEncrypt) {
+		setAdditionalKeyNamesToEncrypt(newAdditionalKeyNamesToEncrypt);
 		return this;
 	}
 

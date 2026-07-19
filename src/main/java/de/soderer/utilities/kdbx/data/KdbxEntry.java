@@ -26,8 +26,12 @@ public class KdbxEntry {
 	private final List<KdbxEntry> history = new ArrayList<>();
 	private final List<KdbxEntryBinary> binaries = new ArrayList<>();
 
-	public KdbxEntry setUuid(final KdbxUUID uuid) {
+	public void setUuid(final KdbxUUID uuid) {
 		this.uuid = uuid;
+	}
+
+	public KdbxEntry withUuid(final KdbxUUID newUuid) {
+		setUuid(newUuid);
 		return this;
 	}
 
@@ -38,8 +42,12 @@ public class KdbxEntry {
 		return uuid;
 	}
 
-	public KdbxEntry setTitle(final String title) {
+	public void setTitle(final String title) {
 		items.put("Title", title);
+	}
+
+	public KdbxEntry withTitle(final String newTitle) {
+		setTitle(newTitle);
 		return this;
 	}
 
@@ -47,8 +55,12 @@ public class KdbxEntry {
 		return (String) items.get("Title");
 	}
 
-	public KdbxEntry setUsername(final String username) {
+	public void setUsername(final String username) {
 		items.put("UserName", username);
+	}
+
+	public KdbxEntry withUsername(final String newUsername) {
+		setUsername(newUsername);
 		return this;
 	}
 
@@ -56,8 +68,12 @@ public class KdbxEntry {
 		return (String) items.get("UserName");
 	}
 
-	public KdbxEntry setPassword(final String password) {
+	public void setPassword(final String password) {
 		items.put("Password", password);
+	}
+
+	public KdbxEntry withPassword(final String newPassword) {
+		setPassword(newPassword);
 		return this;
 	}
 
@@ -65,8 +81,12 @@ public class KdbxEntry {
 		return (String) items.get("Password");
 	}
 
-	public KdbxEntry setUrl(final String url) {
+	public void setUrl(final String url) {
 		items.put("URL", url);
+	}
+
+	public KdbxEntry withUrl(final String newUrl) {
+		setUrl(newUrl);
 		return this;
 	}
 
@@ -74,8 +94,12 @@ public class KdbxEntry {
 		return (String) items.get("URL");
 	}
 
-	public KdbxEntry setNotes(final String notes) {
+	public void setNotes(final String notes) {
 		items.put("Notes", notes);
+	}
+
+	public KdbxEntry withNotes(final String newNotes) {
+		setNotes(newNotes);
 		return this;
 	}
 
@@ -83,8 +107,12 @@ public class KdbxEntry {
 		return (String) items.get("Notes");
 	}
 
-	public KdbxEntry setIconID(final Integer iconID) {
+	public void setIconID(final Integer iconID) {
 		this.iconID = iconID;
+	}
+
+	public KdbxEntry withIconID(final Integer newIconID) {
+		setIconID(newIconID);
 		return this;
 	}
 
@@ -92,8 +120,12 @@ public class KdbxEntry {
 		return iconID;
 	}
 
-	public KdbxEntry setCustomIconUuid(final KdbxUUID customIconUuid) {
+	public void setCustomIconUuid(final KdbxUUID customIconUuid) {
 		this.customIconUuid = customIconUuid;
+	}
+
+	public KdbxEntry withCustomIconUuid(final KdbxUUID newCustomIconUuid) {
+		setCustomIconUuid(newCustomIconUuid);
 		return this;
 	}
 
@@ -101,8 +133,12 @@ public class KdbxEntry {
 		return customIconUuid;
 	}
 
-	public KdbxEntry setForegroundColor(final String foregroundColor) {
+	public void setForegroundColor(final String foregroundColor) {
 		this.foregroundColor = foregroundColor;
+	}
+
+	public KdbxEntry withForegroundColor(final String newForegroundColor) {
+		setForegroundColor(newForegroundColor);
 		return this;
 	}
 
@@ -110,8 +146,12 @@ public class KdbxEntry {
 		return foregroundColor;
 	}
 
-	public KdbxEntry setBackgroundColor(final String backgroundColor) {
+	public void setBackgroundColor(final String backgroundColor) {
 		this.backgroundColor = backgroundColor;
+	}
+
+	public KdbxEntry withBackgroundColor(final String newBackgroundColor) {
+		setBackgroundColor(newBackgroundColor);
 		return this;
 	}
 
@@ -119,8 +159,12 @@ public class KdbxEntry {
 		return backgroundColor;
 	}
 
-	public KdbxEntry setOverrideURL(final String overrideURL) {
+	public void setOverrideURL(final String overrideURL) {
 		this.overrideURL = overrideURL;
+	}
+
+	public KdbxEntry withOverrideURL(final String newOverrideURL) {
+		setOverrideURL(newOverrideURL);
 		return this;
 	}
 
@@ -128,8 +172,12 @@ public class KdbxEntry {
 		return overrideURL;
 	}
 
-	public KdbxEntry setTags(final String tags) {
+	public void setTags(final String tags) {
 		this.tags = tags;
+	}
+
+	public KdbxEntry withTags(final String newTags) {
+		setTags(newTags);
 		return this;
 	}
 
@@ -137,21 +185,29 @@ public class KdbxEntry {
 		return tags;
 	}
 
-	public KdbxEntry setTimes(final KdbxTimes times) {
+	public void setTimes(final KdbxTimes times) {
 		if (times == null) {
 			throw new IllegalArgumentException("Entry's times may not be null");
 		} else {
 			this.times = times;
-			return this;
 		}
+	}
+
+	public KdbxEntry withTimes(final KdbxTimes newTimes) {
+		setTimes(newTimes);
+		return this;
 	}
 
 	public KdbxTimes getTimes() {
 		return times;
 	}
 
-	public KdbxEntry setItem(final String itemKey, final Object itemValue) {
+	public void setItem(final String itemKey, final Object itemValue) {
 		items.put(itemKey, itemValue);
+	}
+
+	public KdbxEntry withItem(final String newItemKey, final Object newItemValue) {
+		setItem(newItemKey, newItemValue);
 		return this;
 	}
 
@@ -159,8 +215,12 @@ public class KdbxEntry {
 		return (String) items.get(itemKey);
 	}
 
-	public KdbxEntry setItems(final Map<String, Object> items) {
+	public void setItems(final Map<String, Object> items) {
 		this.items = items;
+	}
+
+	public KdbxEntry withItems(final Map<String, Object> newItems) {
+		setItems(newItems);
 		return this;
 	}
 
@@ -168,12 +228,16 @@ public class KdbxEntry {
 		return items;
 	}
 
-	public KdbxEntry setAutoType(final boolean enabled, final String dataTransferObfuscation, final String defaultSequence, final String associationWindow, final String associationKeystrokeSequence) {
+	public void setAutoType(final boolean enabled, final String dataTransferObfuscation, final String defaultSequence, final String associationWindow, final String associationKeystrokeSequence) {
 		autoTypeEnabled = enabled;
 		autoTypeDataTransferObfuscation = dataTransferObfuscation;
 		autoTypeDefaultSequence = defaultSequence;
 		autoTypeAssociationWindow = associationWindow;
 		autoTypeAssociationKeystrokeSequence = associationKeystrokeSequence;
+	}
+
+	public KdbxEntry withAutoType(final boolean newEnabled, final String newDataTransferObfuscation, final String newDefaultSequence, final String newAssociationWindow, final String newAssociationKeystrokeSequence) {
+		setAutoType(newEnabled, newDataTransferObfuscation, newDefaultSequence, newAssociationWindow, newAssociationKeystrokeSequence);
 		return this;
 	}
 
@@ -200,8 +264,12 @@ public class KdbxEntry {
 	/**
 	 * Data items of stored files for this entry.
 	 */
-	public KdbxEntry setCustomData(final List<KdbxCustomDataItem> customData) {
+	public void setCustomData(final List<KdbxCustomDataItem> customData) {
 		this.customData = customData;
+	}
+
+	public KdbxEntry withCustomData(final List<KdbxCustomDataItem> newCustomData) {
+		setCustomData(newCustomData);
 		return this;
 	}
 

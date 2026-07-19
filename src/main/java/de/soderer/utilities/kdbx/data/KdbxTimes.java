@@ -21,8 +21,12 @@ public class KdbxTimes {
 		return lastModificationTime;
 	}
 
-	public KdbxTimes setLastModificationTime(final ZonedDateTime lastModificationTime) {
+	public void setLastModificationTime(final ZonedDateTime lastModificationTime) {
 		this.lastModificationTime = lastModificationTime;
+	}
+
+	public KdbxTimes withLastModificationTime(final ZonedDateTime newLastModificationTime) {
+		setLastModificationTime(newLastModificationTime);
 		return this;
 	}
 
@@ -30,8 +34,12 @@ public class KdbxTimes {
 		return creationTime;
 	}
 
-	public KdbxTimes setCreationTime(final ZonedDateTime creationTime) {
+	public void setCreationTime(final ZonedDateTime creationTime) {
 		this.creationTime = creationTime;
+	}
+
+	public KdbxTimes withCreationTime(final ZonedDateTime newCreationTime) {
+		setCreationTime(newCreationTime);
 		return this;
 	}
 
@@ -39,8 +47,12 @@ public class KdbxTimes {
 		return lastAccessTime;
 	}
 
-	public KdbxTimes setLastAccessTime(final ZonedDateTime lastAccessTime) {
+	public void setLastAccessTime(final ZonedDateTime lastAccessTime) {
 		this.lastAccessTime = lastAccessTime;
+	}
+
+	public KdbxTimes withLastAccessTime(final ZonedDateTime newLastAccessTime) {
+		setLastAccessTime(newLastAccessTime);
 		return this;
 	}
 
@@ -48,8 +60,12 @@ public class KdbxTimes {
 		return expiryTime;
 	}
 
-	public KdbxTimes setExpiryTime(final ZonedDateTime expiryTime) {
+	public void setExpiryTime(final ZonedDateTime expiryTime) {
 		this.expiryTime = expiryTime;
+	}
+
+	public KdbxTimes withExpiryTime(final ZonedDateTime newExpiryTime) {
+		setExpiryTime(newExpiryTime);
 		return this;
 	}
 
@@ -57,8 +73,12 @@ public class KdbxTimes {
 		return expires;
 	}
 
-	public KdbxTimes setExpires(final boolean expires) {
+	public void setExpires(final boolean expires) {
 		this.expires = expires;
+	}
+
+	public KdbxTimes withExpires(final boolean newExpires) {
+		setExpires(newExpires);
 		return this;
 	}
 
@@ -66,8 +86,12 @@ public class KdbxTimes {
 		return usageCount;
 	}
 
-	public KdbxTimes setUsageCount(final int usageCount) {
+	public void setUsageCount(final int usageCount) {
 		this.usageCount = usageCount;
+	}
+
+	public KdbxTimes withUsageCount(final int newUsageCount) {
+		setUsageCount(newUsageCount);
 		return this;
 	}
 
@@ -75,8 +99,12 @@ public class KdbxTimes {
 		return locationChanged;
 	}
 
-	public KdbxTimes setLocationChanged(final ZonedDateTime locationChanged) {
+	public void setLocationChanged(final ZonedDateTime locationChanged) {
 		this.locationChanged = locationChanged;
+	}
+
+	public KdbxTimes withLocationChanged(final ZonedDateTime newLocationChanged) {
+		setLocationChanged(newLocationChanged);
 		return this;
 	}
 

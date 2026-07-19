@@ -51,18 +51,30 @@ public class HmacInputStream extends InputStream {
 		}
 	}
 
-	public HmacInputStream setByteOrder(final ByteOrder byteOrder) {
+	public void setByteOrder(final ByteOrder byteOrder) {
 		this.byteOrder = byteOrder;
+	}
+
+	public HmacInputStream withByteOrder(final ByteOrder newByteOrder) {
+		setByteOrder(newByteOrder);
 		return this;
 	}
 
-	public HmacInputStream setHmacAlgorithmName(final String hmacAlgorithmName) {
+	public void setHmacAlgorithmName(final String hmacAlgorithmName) {
 		this.hmacAlgorithmName = hmacAlgorithmName;
+	}
+
+	public HmacInputStream withHmacAlgorithmName(final String newHmacAlgorithmName) {
+		setHmacAlgorithmName(newHmacAlgorithmName);
 		return this;
 	}
 
-	public HmacInputStream setKeyHashDigestName(final String keyHashDigestName) {
+	public void setKeyHashDigestName(final String keyHashDigestName) {
 		this.keyHashDigestName = keyHashDigestName;
+	}
+
+	public HmacInputStream withKeyHashDigestName(final String newKeyHashDigestName) {
+		setKeyHashDigestName(newKeyHashDigestName);
 		return this;
 	}
 

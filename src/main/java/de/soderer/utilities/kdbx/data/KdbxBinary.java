@@ -8,8 +8,12 @@ public class KdbxBinary {
 	/**
 	 * Unique id of this binary
 	 */
-	public KdbxBinary setId(final int id) {
+	public void setId(final int id) {
 		this.id = id;
+	}
+
+	public KdbxBinary withId(final int newId) {
+		setId(newId);
 		return this;
 	}
 
@@ -23,8 +27,12 @@ public class KdbxBinary {
 	/**
 	 * Compression flag (GZIP)
 	 */
-	public KdbxBinary setCompressed(final boolean compressed) {
+	public void setCompressed(final boolean compressed) {
 		this.compressed = compressed;
+	}
+
+	public KdbxBinary withCompressed(final boolean newCompressed) {
+		setCompressed(newCompressed);
 		return this;
 	}
 
@@ -39,8 +47,12 @@ public class KdbxBinary {
 	 * Data of this binary.
 	 * The same data should not be stored multiple times.
 	 */
-	public KdbxBinary setData(final byte[] data) {
+	public void setData(final byte[] data) {
 		this.data = data;
+	}
+
+	public KdbxBinary withData(final byte[] newData) {
+		setData(newData);
 		return this;
 	}
 

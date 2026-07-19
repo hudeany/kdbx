@@ -7,8 +7,12 @@ public class KdbxCustomDataItem {
 	public String value;
 	public ZonedDateTime lastModificationTime = null;
 
-	public KdbxCustomDataItem setKey(final String key) {
+	public void setKey(final String key) {
 		this.key = key;
+	}
+
+	public KdbxCustomDataItem withKey(final String newKey) {
+		setKey(newKey);
 		return this;
 	}
 
@@ -16,8 +20,12 @@ public class KdbxCustomDataItem {
 		return key;
 	}
 
-	public KdbxCustomDataItem setValue(final String value) {
+	public void setValue(final String value) {
 		this.value = value;
+	}
+
+	public KdbxCustomDataItem withValue(final String newValue) {
+		setValue(newValue);
 		return this;
 	}
 
@@ -25,8 +33,12 @@ public class KdbxCustomDataItem {
 		return value;
 	}
 
-	public KdbxCustomDataItem setLastModificationTime(final ZonedDateTime lastModificationTime) {
+	public void setLastModificationTime(final ZonedDateTime lastModificationTime) {
 		this.lastModificationTime = lastModificationTime;
+	}
+
+	public KdbxCustomDataItem withLastModificationTime(final ZonedDateTime newLastModificationTime) {
+		setLastModificationTime(newLastModificationTime);
 		return this;
 	}
 

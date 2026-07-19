@@ -7,8 +7,12 @@ public class KdbxMemoryProtection {
 	private boolean protectURL;
 	private boolean protectNotes;
 
-	public KdbxMemoryProtection setProtectTitle(final boolean protectTitle) {
+	public void setProtectTitle(final boolean protectTitle) {
 		this.protectTitle = protectTitle;
+	}
+
+	public KdbxMemoryProtection withProtectTitle(final boolean newProtectTitle) {
+		setProtectTitle(newProtectTitle);
 		return this;
 	}
 
@@ -16,8 +20,12 @@ public class KdbxMemoryProtection {
 		return protectTitle;
 	}
 
-	public KdbxMemoryProtection setProtectUserName(final boolean protectUserName) {
+	public void setProtectUserName(final boolean protectUserName) {
 		this.protectUserName = protectUserName;
+	}
+
+	public KdbxMemoryProtection withProtectUserName(final boolean newProtectUserName) {
+		setProtectUserName(newProtectUserName);
 		return this;
 	}
 
@@ -25,8 +33,12 @@ public class KdbxMemoryProtection {
 		return protectUserName;
 	}
 
-	public KdbxMemoryProtection setProtectPassword(final boolean protectPassword) {
+	public void setProtectPassword(final boolean protectPassword) {
 		this.protectPassword = protectPassword;
+	}
+
+	public KdbxMemoryProtection withProtectPassword(final boolean newProtectPassword) {
+		setProtectPassword(newProtectPassword);
 		return this;
 	}
 
@@ -34,8 +46,12 @@ public class KdbxMemoryProtection {
 		return protectPassword;
 	}
 
-	public KdbxMemoryProtection setProtectURL(final boolean protectURL) {
+	public void setProtectURL(final boolean protectURL) {
 		this.protectURL = protectURL;
+	}
+
+	public KdbxMemoryProtection withProtectURL(final boolean newProtectURL) {
+		setProtectURL(newProtectURL);
 		return this;
 	}
 
@@ -43,8 +59,12 @@ public class KdbxMemoryProtection {
 		return protectURL;
 	}
 
-	public KdbxMemoryProtection setProtectNotes(final boolean protectNotes) {
+	public void setProtectNotes(final boolean protectNotes) {
 		this.protectNotes = protectNotes;
+	}
+
+	public KdbxMemoryProtection withProtectNotes(final boolean newProtectNotes) {
+		setProtectNotes(newProtectNotes);
 		return this;
 	}
 

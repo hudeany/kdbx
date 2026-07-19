@@ -38,13 +38,17 @@ public class KeyDerivationFunctionInfoAes implements KeyDerivationFunctionInfo {
 		return aesTransformRounds;
 	}
 
-	public KeyDerivationFunctionInfoAes setAesTransformRounds(final long aesTransformRounds) {
+	public void setAesTransformRounds(final long aesTransformRounds) {
 		if (aesTransformRounds <= 0) {
 			throw new IllegalArgumentException("Invalid AES transform rounds value: " + aesTransformRounds);
 		} else if (aesTransformRounds > MAX_AES_TRANSFORM_ROUNDS) {
 			throw new IllegalArgumentException("AES transform rounds value " + aesTransformRounds + " exceeds maximum allowed value of " + MAX_AES_TRANSFORM_ROUNDS);
 		}
 		this.aesTransformRounds = aesTransformRounds;
+	}
+
+	public KeyDerivationFunctionInfoAes withAesTransformRounds(final long newAesTransformRounds) {
+		setAesTransformRounds(newAesTransformRounds);
 		return this;
 	}
 
@@ -52,8 +56,12 @@ public class KeyDerivationFunctionInfoAes implements KeyDerivationFunctionInfo {
 		return aesTransformSeed;
 	}
 
-	public KeyDerivationFunctionInfoAes setAesTransformSeed(final byte[] aesTransformSeed) {
+	public void setAesTransformSeed(final byte[] aesTransformSeed) {
 		this.aesTransformSeed = aesTransformSeed;
+	}
+
+	public KeyDerivationFunctionInfoAes withAesTransformSeed(final byte[] newAesTransformSeed) {
+		setAesTransformSeed(newAesTransformSeed);
 		return this;
 	}
 
@@ -77,7 +85,7 @@ public class KeyDerivationFunctionInfoAes implements KeyDerivationFunctionInfo {
 	}
 
 	@Override
-	public KeyDerivationFunctionInfoAes setValues(final VariantDictionary variantDictionary) throws Exception {
+	public void setValues(final VariantDictionary variantDictionary) throws Exception {
 		final KeyDerivationFunction keyDerivationFunction = KeyDerivationFunction.getById((byte[]) variantDictionary.get(VariantDictionary.KDF_UUID).getJavaValue());
 		if (keyDerivationFunction == KeyDerivationFunction.AES_KDBX3) {
 			setAesKdbxType(KeyDerivationFunctionInfoAes.KdbxType.AES_KDBX3);
@@ -88,6 +96,10 @@ public class KeyDerivationFunctionInfoAes implements KeyDerivationFunctionInfo {
 		}
 		setAesTransformRounds((Long) variantDictionary.get(VariantDictionary.KDF_AES_ROUNDS).getJavaValue());
 		setAesTransformSeed((byte[]) variantDictionary.get(VariantDictionary.KDF_AES_SEED).getJavaValue());
+	}
+
+	public KeyDerivationFunctionInfoAes withValues(final VariantDictionary newVariantDictionary) throws Exception {
+		setValues(newVariantDictionary);
 		return this;
 	}
 

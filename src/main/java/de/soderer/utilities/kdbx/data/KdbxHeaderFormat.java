@@ -52,11 +52,11 @@ public abstract class KdbxHeaderFormat {
 
 	public abstract OuterEncryptionAlgorithm getOuterEncryptionAlgorithm();
 
-	public abstract KdbxHeaderFormat setOuterEncryptionAlgorithm(OuterEncryptionAlgorithm outerEncryptionAlgorithm);
+	public abstract void setOuterEncryptionAlgorithm(OuterEncryptionAlgorithm outerEncryptionAlgorithm);
 
 	public abstract InnerEncryptionAlgorithm getInnerEncryptionAlgorithm();
 
-	public abstract KdbxHeaderFormat setInnerEncryptionAlgorithm(InnerEncryptionAlgorithm chacha20);
+	public abstract void setInnerEncryptionAlgorithm(InnerEncryptionAlgorithm chacha20);
 
 	public abstract boolean isCompressData();
 

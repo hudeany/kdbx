@@ -68,8 +68,12 @@ public class KdbxReader implements AutoCloseable {
 		this.inputStream = inputStream;
 	}
 
-	public KdbxReader setStrictMode(final boolean strictMode) {
+	public void setStrictMode(final boolean strictMode) {
 		this.strictMode = strictMode;
+	}
+
+	public KdbxReader withStrictMode(final boolean newStrictMode) {
+		setStrictMode(newStrictMode);
 		return this;
 	}
 
@@ -514,7 +518,7 @@ public class KdbxReader implements AutoCloseable {
 					final boolean compressed = "True".equals(Utilities.getAttributeValue(binaryChildNode, "Compressed"));
 					final String dataBase64String = parseStringValue(binaryChildNode);
 					final byte[] data = Base64.getDecoder().decode(dataBase64String);
-					binaryItems.add(new KdbxBinary().setId(id).setCompressed(compressed).setData(data));
+					binaryItems.add(new KdbxBinary().withId(id).withCompressed(compressed).withData(data));
 				} else {
 					if (strictMode) {
 						throw new Exception("Unexpected binary node name: " + binaryChildNode.getNodeName());

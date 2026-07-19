@@ -46,12 +46,16 @@ public class KeyDerivationFunctionInfoArgon implements KeyDerivationFunctionInfo
 		return type;
 	}
 
-	public KeyDerivationFunctionInfoArgon setType(final Argon2Type type) {
+	public void setType(final Argon2Type type) {
 		if (type == null) {
 			this.type = Argon2Type.Argon2_D;
 		} else {
 			this.type = type;
 		}
+	}
+
+	public KeyDerivationFunctionInfoArgon withType(final Argon2Type newType) {
+		setType(newType);
 		return this;
 	}
 
@@ -59,13 +63,17 @@ public class KeyDerivationFunctionInfoArgon implements KeyDerivationFunctionInfo
 		return iterations;
 	}
 
-	public KeyDerivationFunctionInfoArgon setIterations(final int iterations) {
+	public void setIterations(final int iterations) {
 		if (iterations <= 0) {
 			throw new IllegalArgumentException("Invalid Argon2 iterations value: " + iterations);
 		} else if (iterations > MAX_ITERATIONS) {
 			throw new IllegalArgumentException("Argon2 iterations value " + iterations + " exceeds maximum allowed value of " + MAX_ITERATIONS);
 		}
 		this.iterations = iterations;
+	}
+
+	public KeyDerivationFunctionInfoArgon withIterations(final int newIterations) {
+		setIterations(newIterations);
 		return this;
 	}
 
@@ -73,13 +81,17 @@ public class KeyDerivationFunctionInfoArgon implements KeyDerivationFunctionInfo
 		return memoryInBytes;
 	}
 
-	public KeyDerivationFunctionInfoArgon setMemoryInBytes(final long memoryInBytes) {
+	public void setMemoryInBytes(final long memoryInBytes) {
 		if (memoryInBytes <= 0) {
 			throw new IllegalArgumentException("Invalid Argon2 memory value: " + memoryInBytes);
 		} else if (memoryInBytes > MAX_MEMORY_IN_BYTES) {
 			throw new IllegalArgumentException("Argon2 memory value " + memoryInBytes + " exceeds maximum allowed value of " + MAX_MEMORY_IN_BYTES + " bytes");
 		}
 		this.memoryInBytes = memoryInBytes;
+	}
+
+	public KeyDerivationFunctionInfoArgon withMemoryInBytes(final long newMemoryInBytes) {
+		setMemoryInBytes(newMemoryInBytes);
 		return this;
 	}
 
@@ -87,13 +99,17 @@ public class KeyDerivationFunctionInfoArgon implements KeyDerivationFunctionInfo
 		return parallelism;
 	}
 
-	public KeyDerivationFunctionInfoArgon setParallelism(final int parallelism) {
+	public void setParallelism(final int parallelism) {
 		if (parallelism <= 0) {
 			throw new IllegalArgumentException("Invalid Argon2 parallelism value: " + parallelism);
 		} else if (parallelism > MAX_PARALLELISM) {
 			throw new IllegalArgumentException("Argon2 parallelism value " + parallelism + " exceeds maximum allowed value of " + MAX_PARALLELISM);
 		}
 		this.parallelism = parallelism;
+	}
+
+	public KeyDerivationFunctionInfoArgon withParallelism(final int newParallelism) {
+		setParallelism(newParallelism);
 		return this;
 	}
 
@@ -101,8 +117,12 @@ public class KeyDerivationFunctionInfoArgon implements KeyDerivationFunctionInfo
 		return salt;
 	}
 
-	public KeyDerivationFunctionInfoArgon setSalt(final byte[] salt) {
+	public void setSalt(final byte[] salt) {
 		this.salt = salt;
+	}
+
+	public KeyDerivationFunctionInfoArgon withSalt(final byte[] newSalt) {
+		setSalt(newSalt);
 		return this;
 	}
 
@@ -110,8 +130,12 @@ public class KeyDerivationFunctionInfoArgon implements KeyDerivationFunctionInfo
 		return version;
 	}
 
-	public KeyDerivationFunctionInfoArgon setVersion(final int version) {
+	public void setVersion(final int version) {
 		this.version = version;
+	}
+
+	public KeyDerivationFunctionInfoArgon withVersion(final int newVersion) {
+		setVersion(newVersion);
 		return this;
 	}
 
@@ -138,7 +162,7 @@ public class KeyDerivationFunctionInfoArgon implements KeyDerivationFunctionInfo
 	}
 
 	@Override
-	public KeyDerivationFunctionInfoArgon setValues(final VariantDictionary variantDictionary) throws Exception {
+	public void setValues(final VariantDictionary variantDictionary) throws Exception {
 		final KeyDerivationFunction keyDerivationFunction = KeyDerivationFunction.getById((byte[]) variantDictionary.get(VariantDictionary.KDF_UUID).getJavaValue());
 		if (keyDerivationFunction == KeyDerivationFunction.ARGON2D) {
 			setType(KeyDerivationFunctionInfoArgon.Argon2Type.Argon2_D);
@@ -152,6 +176,10 @@ public class KeyDerivationFunctionInfoArgon implements KeyDerivationFunctionInfo
 		setParallelism(((Number) variantDictionary.get(VariantDictionary.KDF_ARGON2_PARALLELISM).getJavaValue()).intValue());
 		setSalt((byte[]) variantDictionary.get(VariantDictionary.KDF_ARGON2_SALT).getJavaValue());
 		setVersion(((Number) variantDictionary.get(VariantDictionary.KDF_ARGON2_VERSION).getJavaValue()).intValue());
+	}
+
+	public KeyDerivationFunctionInfoArgon withValues(final VariantDictionary newVariantDictionary) throws Exception {
+		setValues(newVariantDictionary);
 		return this;
 	}
 

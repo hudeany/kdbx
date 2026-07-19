@@ -144,23 +144,31 @@ public class KdbxHeaderFormat3 extends KdbxHeaderFormat {
 		return dataFormatVersion;
 	}
 
-	public KdbxHeaderFormat3 setDataFormatVersion(final Version dataFormatVersion) {
+	public void setDataFormatVersion(final Version dataFormatVersion) {
 		headerBytes = null;
 		if (dataFormatVersion.getMajorVersionNumber() != 3) {
 			throw new IllegalArgumentException("Invalid major data version for storage format settings of version 3");
 		} else {
 			this.dataFormatVersion = dataFormatVersion;
-			return this;
 		}
+	}
+
+	public KdbxHeaderFormat3 withDataFormatVersion(final Version newDataFormatVersion) {
+		setDataFormatVersion(newDataFormatVersion);
+		return this;
 	}
 
 	public long getTransformRounds() {
 		return transformRounds;
 	}
 
-	public KdbxHeaderFormat3 setTransformRounds(final long transformRounds) {
+	public void setTransformRounds(final long transformRounds) {
 		headerBytes = null;
 		this.transformRounds = transformRounds;
+	}
+
+	public KdbxHeaderFormat3 withTransformRounds(final long newTransformRounds) {
+		setTransformRounds(newTransformRounds);
 		return this;
 	}
 
@@ -169,9 +177,13 @@ public class KdbxHeaderFormat3 extends KdbxHeaderFormat {
 		return compressData;
 	}
 
-	public KdbxHeaderFormat3 setCompressData(final boolean compressData) {
+	public void setCompressData(final boolean compressData) {
 		headerBytes = null;
 		this.compressData = compressData;
+	}
+
+	public KdbxHeaderFormat3 withCompressData(final boolean newCompressData) {
+		setCompressData(newCompressData);
 		return this;
 	}
 
@@ -181,13 +193,17 @@ public class KdbxHeaderFormat3 extends KdbxHeaderFormat {
 	}
 
 	@Override
-	public KdbxHeaderFormat3 setOuterEncryptionAlgorithm(final OuterEncryptionAlgorithm outerEncryptionAlgorithm) {
+	public void setOuterEncryptionAlgorithm(final OuterEncryptionAlgorithm outerEncryptionAlgorithm) {
 		headerBytes = null;
 		if (outerEncryptionAlgorithm == null) {
 			this.outerEncryptionAlgorithm = OuterEncryptionAlgorithm.AES_256;
 		} else {
 			this.outerEncryptionAlgorithm = outerEncryptionAlgorithm;
 		}
+	}
+
+	public KdbxHeaderFormat3 withOuterEncryptionAlgorithm(final OuterEncryptionAlgorithm newOuterEncryptionAlgorithm) {
+		setOuterEncryptionAlgorithm(newOuterEncryptionAlgorithm);
 		return this;
 	}
 
@@ -197,13 +213,17 @@ public class KdbxHeaderFormat3 extends KdbxHeaderFormat {
 	}
 
 	@Override
-	public KdbxHeaderFormat3 setInnerEncryptionAlgorithm(final InnerEncryptionAlgorithm innerEncryptionAlgorithm) {
+	public void setInnerEncryptionAlgorithm(final InnerEncryptionAlgorithm innerEncryptionAlgorithm) {
 		headerBytes = null;
 		if (innerEncryptionAlgorithm == null) {
 			this.innerEncryptionAlgorithm = InnerEncryptionAlgorithm.CHACHA20;
 		} else {
 			this.innerEncryptionAlgorithm = innerEncryptionAlgorithm;
 		}
+	}
+
+	public KdbxHeaderFormat3 withInnerEncryptionAlgorithm(final InnerEncryptionAlgorithm newInnerEncryptionAlgorithm) {
+		setInnerEncryptionAlgorithm(newInnerEncryptionAlgorithm);
 		return this;
 	}
 
@@ -211,9 +231,13 @@ public class KdbxHeaderFormat3 extends KdbxHeaderFormat {
 		return masterSeed;
 	}
 
-	public KdbxHeaderFormat3 setMasterSeed(final byte[] masterSeed) {
+	public void setMasterSeed(final byte[] masterSeed) {
 		headerBytes = null;
 		this.masterSeed = masterSeed;
+	}
+
+	public KdbxHeaderFormat3 withMasterSeed(final byte[] newMasterSeed) {
+		setMasterSeed(newMasterSeed);
 		return this;
 	}
 
@@ -221,9 +245,13 @@ public class KdbxHeaderFormat3 extends KdbxHeaderFormat {
 		return transformSeed;
 	}
 
-	public KdbxHeaderFormat3 setTransformSeed(final byte[] transformSeed) {
+	public void setTransformSeed(final byte[] transformSeed) {
 		headerBytes = null;
 		this.transformSeed = transformSeed;
+	}
+
+	public KdbxHeaderFormat3 withTransformSeed(final byte[] newTransformSeed) {
+		setTransformSeed(newTransformSeed);
 		return this;
 	}
 
@@ -231,9 +259,13 @@ public class KdbxHeaderFormat3 extends KdbxHeaderFormat {
 		return encryptionIV;
 	}
 
-	public KdbxHeaderFormat3 setEncryptionIV(final byte[] encryptionIV) {
+	public void setEncryptionIV(final byte[] encryptionIV) {
 		headerBytes = null;
 		this.encryptionIV = encryptionIV;
+	}
+
+	public KdbxHeaderFormat3 withEncryptionIV(final byte[] newEncryptionIV) {
+		setEncryptionIV(newEncryptionIV);
 		return this;
 	}
 
@@ -241,9 +273,13 @@ public class KdbxHeaderFormat3 extends KdbxHeaderFormat {
 		return innerEncryptionKeyBytes;
 	}
 
-	public KdbxHeaderFormat3 setInnerEncryptionKeyBytes(final byte[] innerEncryptionKeyBytes) {
+	public void setInnerEncryptionKeyBytes(final byte[] innerEncryptionKeyBytes) {
 		headerBytes = null;
 		this.innerEncryptionKeyBytes = innerEncryptionKeyBytes;
+	}
+
+	public KdbxHeaderFormat3 withInnerEncryptionKeyBytes(final byte[] newInnerEncryptionKeyBytes) {
+		setInnerEncryptionKeyBytes(newInnerEncryptionKeyBytes);
 		return this;
 	}
 
@@ -251,9 +287,13 @@ public class KdbxHeaderFormat3 extends KdbxHeaderFormat {
 		return streamStartBytes;
 	}
 
-	public KdbxHeaderFormat3 setStreamStartBytes(final byte[] streamStartBytes) {
+	public void setStreamStartBytes(final byte[] streamStartBytes) {
 		headerBytes = null;
 		this.streamStartBytes = streamStartBytes;
+	}
+
+	public KdbxHeaderFormat3 withStreamStartBytes(final byte[] newStreamStartBytes) {
+		setStreamStartBytes(newStreamStartBytes);
 		return this;
 	}
 

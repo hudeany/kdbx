@@ -22,8 +22,12 @@ public class KdbxGroup {
 	/**
 	 * Name of this group
 	 */
-	public KdbxGroup setName(final String name) {
+	public void setName(final String name) {
 		this.name = name;
+	}
+
+	public KdbxGroup withName(final String newName) {
+		setName(newName);
 		return this;
 	}
 
@@ -34,8 +38,12 @@ public class KdbxGroup {
 		return name;
 	}
 
-	public KdbxGroup setUuid(final KdbxUUID uuid) {
+	public void setUuid(final KdbxUUID uuid) {
 		this.uuid = uuid;
+	}
+
+	public KdbxGroup withUuid(final KdbxUUID newUuid) {
+		setUuid(newUuid);
 		return this;
 	}
 
@@ -49,13 +57,17 @@ public class KdbxGroup {
 	/**
 	 * KDBX times of this group
 	 */
-	public KdbxGroup setTimes(final KdbxTimes times) {
+	public void setTimes(final KdbxTimes times) {
 		if (times == null) {
 			throw new IllegalArgumentException("Group's times may not be null");
 		} else {
 			this.times = times;
-			return this;
 		}
+	}
+
+	public KdbxGroup withTimes(final KdbxTimes newTimes) {
+		setTimes(newTimes);
+		return this;
 	}
 
 	/**
@@ -68,8 +80,12 @@ public class KdbxGroup {
 	/**
 	 * Notes for this group
 	 */
-	public KdbxGroup setNotes(final String notes) {
+	public void setNotes(final String notes) {
 		this.notes = notes;
+	}
+
+	public KdbxGroup withNotes(final String newNotes) {
+		setNotes(newNotes);
 		return this;
 	}
 
@@ -83,8 +99,12 @@ public class KdbxGroup {
 	/**
 	 * Standard icon id for this group
 	 */
-	public KdbxGroup setIconID(final Integer iconID) {
+	public void setIconID(final Integer iconID) {
 		this.iconID = iconID;
+	}
+
+	public KdbxGroup withIconID(final Integer newIconID) {
+		setIconID(newIconID);
 		return this;
 	}
 
@@ -98,8 +118,12 @@ public class KdbxGroup {
 	/**
 	 * Custom icon uuid for this group, which is stored in meta data of its database
 	 */
-	public KdbxGroup setCustomIconUuid(final KdbxUUID customIconUuid) {
+	public void setCustomIconUuid(final KdbxUUID customIconUuid) {
 		this.customIconUuid = customIconUuid;
+	}
+
+	public KdbxGroup withCustomIconUuid(final KdbxUUID newCustomIconUuid) {
+		setCustomIconUuid(newCustomIconUuid);
 		return this;
 	}
 
@@ -113,8 +137,12 @@ public class KdbxGroup {
 	/**
 	 * This group is shown in expanded state in a GUI
 	 */
-	public KdbxGroup setExpanded(final boolean isExpanded) {
+	public void setExpanded(final boolean isExpanded) {
 		expanded = isExpanded;
+	}
+
+	public KdbxGroup withExpanded(final boolean newIsExpanded) {
+		setExpanded(newIsExpanded);
 		return this;
 	}
 
@@ -128,8 +156,12 @@ public class KdbxGroup {
 	/**
 	 * Default auto type sequence for this group
 	 */
-	public KdbxGroup setDefaultAutoTypeSequence(final String defaultAutoTypeSequence) {
+	public void setDefaultAutoTypeSequence(final String defaultAutoTypeSequence) {
 		this.defaultAutoTypeSequence = defaultAutoTypeSequence;
+	}
+
+	public KdbxGroup withDefaultAutoTypeSequence(final String newDefaultAutoTypeSequence) {
+		setDefaultAutoTypeSequence(newDefaultAutoTypeSequence);
 		return this;
 	}
 
@@ -143,8 +175,12 @@ public class KdbxGroup {
 	/**
 	 * Auto type is enabled for this group
 	 */
-	public KdbxGroup setEnableAutoType(final boolean enableAutoType) {
+	public void setEnableAutoType(final boolean enableAutoType) {
 		this.enableAutoType = enableAutoType;
+	}
+
+	public KdbxGroup withEnableAutoType(final boolean newEnableAutoType) {
+		setEnableAutoType(newEnableAutoType);
 		return this;
 	}
 
@@ -158,8 +194,12 @@ public class KdbxGroup {
 	/**
 	 * Include this group is search operations
 	 */
-	public KdbxGroup setEnableSearching(final boolean enableSearching) {
+	public void setEnableSearching(final boolean enableSearching) {
 		this.enableSearching = enableSearching;
+	}
+
+	public KdbxGroup withEnableSearching(final boolean newEnableSearching) {
+		setEnableSearching(newEnableSearching);
 		return this;
 	}
 
@@ -173,8 +213,12 @@ public class KdbxGroup {
 	/**
 	 * UUID of the last scroll visible entry
 	 */
-	public KdbxGroup setLastTopVisibleEntry(final KdbxUUID lastTopVisibleEntry) {
+	public void setLastTopVisibleEntry(final KdbxUUID lastTopVisibleEntry) {
 		this.lastTopVisibleEntry = lastTopVisibleEntry;
+	}
+
+	public KdbxGroup withLastTopVisibleEntry(final KdbxUUID newLastTopVisibleEntry) {
+		setLastTopVisibleEntry(newLastTopVisibleEntry);
 		return this;
 	}
 
@@ -189,8 +233,12 @@ public class KdbxGroup {
 	 * Binary data items of stored files for this group.
 	 * MAY ONLY be present in KDBX 4.0 or higher.
 	 */
-	public KdbxGroup setCustomData(final List<KdbxCustomDataItem> customData) {
+	public void setCustomData(final List<KdbxCustomDataItem> customData) {
 		this.customData = customData;
+	}
+
+	public KdbxGroup withCustomData(final List<KdbxCustomDataItem> newCustomData) {
+		setCustomData(newCustomData);
 		return this;
 	}
 
@@ -205,8 +253,12 @@ public class KdbxGroup {
 	/**
 	 * Sub groups of this group
 	 */
-	public KdbxGroup setGroups(final List<KdbxGroup> groups) {
+	public void setGroups(final List<KdbxGroup> groups) {
 		this.groups = groups;
+	}
+
+	public KdbxGroup withGroups(final List<KdbxGroup> newGroups) {
+		setGroups(newGroups);
 		return this;
 	}
 
@@ -220,8 +272,12 @@ public class KdbxGroup {
 	/**
 	 * Entries of this group
 	 */
-	public KdbxGroup setEntries(final List<KdbxEntry> entries) {
+	public void setEntries(final List<KdbxEntry> entries) {
 		this.entries = entries;
+	}
+
+	public KdbxGroup withEntries(final List<KdbxEntry> newEntries) {
+		setEntries(newEntries);
 		return this;
 	}
 

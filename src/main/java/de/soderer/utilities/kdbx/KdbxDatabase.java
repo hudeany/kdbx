@@ -27,8 +27,12 @@ public class KdbxDatabase {
 	private List<KdbxEntry> entries = new ArrayList<>();
 	private final Map<KdbxUUID, ZonedDateTime> deletedObjects = new LinkedHashMap<>();
 
-	public KdbxDatabase setHeaderFormat(final KdbxHeaderFormat headerFormat) {
+	public void setHeaderFormat(final KdbxHeaderFormat headerFormat) {
 		this.headerFormat = headerFormat;
+	}
+
+	public KdbxDatabase withHeaderFormat(final KdbxHeaderFormat newHeaderFormat) {
+		setHeaderFormat(newHeaderFormat);
 		return this;
 	}
 
@@ -41,8 +45,12 @@ public class KdbxDatabase {
 	 * Dataversion <= 3.1 --> stored in KdbxMeta binaries
 	 * Dataversion >= 4.0 --> stored in KdbxInnerHeaderType.BINARY_ATTACHMENT
 	 */
-	public KdbxDatabase setBinaryAttachments(final List<KdbxBinary> binaryAttachments) {
+	public void setBinaryAttachments(final List<KdbxBinary> binaryAttachments) {
 		this.binaryAttachments = binaryAttachments;
+	}
+
+	public KdbxDatabase withBinaryAttachments(final List<KdbxBinary> newBinaryAttachments) {
+		setBinaryAttachments(newBinaryAttachments);
 		return this;
 	}
 
@@ -55,21 +63,29 @@ public class KdbxDatabase {
 		return binaryAttachments;
 	}
 
-	public KdbxDatabase setMeta(final KdbxMeta meta) {
+	public void setMeta(final KdbxMeta meta) {
 		if (meta == null) {
 			throw new IllegalArgumentException("Database's meta may not be null");
 		} else {
 			this.meta = meta;
-			return this;
 		}
+	}
+
+	public KdbxDatabase withMeta(final KdbxMeta newMeta) {
+		setMeta(newMeta);
+		return this;
 	}
 
 	public KdbxMeta getMeta() {
 		return meta;
 	}
 
-	public KdbxDatabase setGroups(final List<KdbxGroup> groups) {
+	public void setGroups(final List<KdbxGroup> groups) {
 		this.groups = groups;
+	}
+
+	public KdbxDatabase withGroups(final List<KdbxGroup> newGroups) {
+		setGroups(newGroups);
 		return this;
 	}
 
@@ -77,8 +93,12 @@ public class KdbxDatabase {
 		return groups;
 	}
 
-	public KdbxDatabase setEntries(final List<KdbxEntry> entries) {
+	public void setEntries(final List<KdbxEntry> entries) {
 		this.entries = entries;
+	}
+
+	public KdbxDatabase withEntries(final List<KdbxEntry> newEntries) {
+		setEntries(newEntries);
 		return this;
 	}
 
