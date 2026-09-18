@@ -71,7 +71,7 @@
 		<checksum file="${buildPath}/kdbx-${version}.jar" fileext=".md5" forceOverwrite="yes" />
 		<checksum file="${buildPath}/kdbx-${version}.jar" algorithm="SHA-1" fileext=".sha1" forceOverwrite="yes" />
 
-		<jar destfile="${buildPath}/kdbx-${version}_sources.jar">
+		<jar destfile="${buildPath}/kdbx-${version}-sources.jar">
 			<manifest>
 				<attribute name="Version" value="${version}" />
 			</manifest>
@@ -80,8 +80,8 @@
 
 			<fileset dir="" includes="LICENSE.txt"/>
 		</jar>
-		<checksum file="${buildPath}/kdbx-${version}_sources.jar" fileext=".md5" forceOverwrite="yes"/>
-		<checksum file="${buildPath}/kdbx-${version}_sources.jar" algorithm="SHA-1" fileext=".sha1" forceOverwrite="yes" />
+		<checksum file="${buildPath}/kdbx-${version}-sources.jar" fileext=".md5" forceOverwrite="yes"/>
+		<checksum file="${buildPath}/kdbx-${version}-sources.jar" algorithm="SHA-1" fileext=".sha1" forceOverwrite="yes" />
 	</target>
 
 	<target name="test" depends="create_jar">
