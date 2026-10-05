@@ -1,12 +1,16 @@
 package de.soderer.utilities.kdbx;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import de.soderer.utilities.kdbx.data.KdbxEntry;
 import de.soderer.utilities.kdbx.data.KdbxUUID;
@@ -24,22 +28,22 @@ public class KdbxReaderTest {
 			kdbxReader.setStrictMode(true);
 			database = kdbxReader.readKdbxDatabase("Äbc123@".toCharArray());
 
-			Assert.assertEquals("4.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
+			assertEquals("4.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
 
-			Assert.assertEquals("Test Database", database.getMeta().getDatabaseName());
+			assertEquals("Test Database", database.getMeta().getDatabaseName());
 
-			Assert.assertEquals(1, database.getGroups().size());
-			Assert.assertEquals("Database", database.getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().size());
+			assertEquals("Database", database.getGroups().get(0).getName());
 
-			Assert.assertEquals(6, database.getGroups().get(0).getGroups().size());
-			Assert.assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
+			assertEquals(6, database.getGroups().get(0).getGroups().size());
+			assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
 
-			Assert.assertEquals(2, database.getAllEntries().size());
-			Assert.assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
-			Assert.assertEquals("Test Pässword #2", database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
+			assertEquals(2, database.getAllEntries().size());
+			assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
+			assertEquals("Test Pässword #2", database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 
 		final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -47,38 +51,38 @@ public class KdbxReaderTest {
 		try (KdbxWriter kdbxWriter = new KdbxWriter(outputStream)) {
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray());
 			if (database == null) {
-				Assert.fail("Databse is null");
+				fail("Databse is null");
 				throw new RuntimeException();
 			}
 			kdbxWriter.writeKdbxDatabase(database, database.getHeaderFormat(), credentials);
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 
-		Assert.assertTrue(outputStream.size() > 0);
+		assertTrue(outputStream.size() > 0);
 
 		try (KdbxReader kdbxReader = new KdbxReader(new ByteArrayInputStream(outputStream.toByteArray()))) {
 			kdbxReader.setStrictMode(true);
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray());
 			database = kdbxReader.readKdbxDatabase(credentials);
 
-			Assert.assertEquals("4.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
+			assertEquals("4.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
 
-			Assert.assertEquals("Test Database", database.getMeta().getDatabaseName());
+			assertEquals("Test Database", database.getMeta().getDatabaseName());
 
-			Assert.assertEquals(1, database.getGroups().size());
-			Assert.assertEquals("Database", database.getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().size());
+			assertEquals("Database", database.getGroups().get(0).getName());
 
-			Assert.assertEquals(6, database.getGroups().get(0).getGroups().size());
-			Assert.assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
+			assertEquals(6, database.getGroups().get(0).getGroups().size());
+			assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
 
-			Assert.assertEquals(2, database.getAllEntries().size());
-			Assert.assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
-			Assert.assertEquals("Test Pässword #2", database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
+			assertEquals(2, database.getAllEntries().size());
+			assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
+			assertEquals("Test Pässword #2", database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 	}
 
@@ -87,20 +91,20 @@ public class KdbxReaderTest {
 		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_ChaCha20_Argon2d.kdbx"))) {
 			kdbxReader.setStrictMode(true);
 			final KdbxDatabase database = kdbxReader.readKdbxDatabase("Äbc123@".toCharArray());
-			Assert.assertEquals("Test Database", database.getMeta().getDatabaseName());
+			assertEquals("Test Database", database.getMeta().getDatabaseName());
 
-			Assert.assertEquals(1, database.getGroups().size());
-			Assert.assertEquals("Database", database.getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().size());
+			assertEquals("Database", database.getGroups().get(0).getName());
 
-			Assert.assertEquals(6, database.getGroups().get(0).getGroups().size());
-			Assert.assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
+			assertEquals(6, database.getGroups().get(0).getGroups().size());
+			assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
 
-			Assert.assertEquals(2, database.getAllEntries().size());
-			Assert.assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
-			Assert.assertEquals("Test Pässword #2", database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
+			assertEquals(2, database.getAllEntries().size());
+			assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
+			assertEquals("Test Pässword #2", database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 	}
 
@@ -109,20 +113,20 @@ public class KdbxReaderTest {
 		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_ChaCha20_Argon2id.kdbx"))) {
 			kdbxReader.setStrictMode(true);
 			final KdbxDatabase database = kdbxReader.readKdbxDatabase("Äbc123@".toCharArray());
-			Assert.assertEquals("Test Database", database.getMeta().getDatabaseName());
+			assertEquals("Test Database", database.getMeta().getDatabaseName());
 
-			Assert.assertEquals(1, database.getGroups().size());
-			Assert.assertEquals("Database", database.getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().size());
+			assertEquals("Database", database.getGroups().get(0).getName());
 
-			Assert.assertEquals(6, database.getGroups().get(0).getGroups().size());
-			Assert.assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
+			assertEquals(6, database.getGroups().get(0).getGroups().size());
+			assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
 
-			Assert.assertEquals(2, database.getAllEntries().size());
-			Assert.assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
-			Assert.assertEquals("Test Pässword #2", database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
+			assertEquals(2, database.getAllEntries().size());
+			assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
+			assertEquals("Test Pässword #2", database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 	}
 	@Test
@@ -130,20 +134,20 @@ public class KdbxReaderTest {
 		try (KdbxReader kdbxReader = new KdbxReader(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_NoZip.kdbx"))) {
 			kdbxReader.setStrictMode(true);
 			final KdbxDatabase database = kdbxReader.readKdbxDatabase("Äbc123@".toCharArray());
-			Assert.assertEquals("Test Database", database.getMeta().getDatabaseName());
+			assertEquals("Test Database", database.getMeta().getDatabaseName());
 
-			Assert.assertEquals(1, database.getGroups().size());
-			Assert.assertEquals("Database", database.getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().size());
+			assertEquals("Database", database.getGroups().get(0).getName());
 
-			Assert.assertEquals(6, database.getGroups().get(0).getGroups().size());
-			Assert.assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
+			assertEquals(6, database.getGroups().get(0).getGroups().size());
+			assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
 
-			Assert.assertEquals(2, database.getAllEntries().size());
-			Assert.assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
-			Assert.assertEquals("Test Pässword #2", database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
+			assertEquals(2, database.getAllEntries().size());
+			assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
+			assertEquals("Test Pässword #2", database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 	}
 
@@ -154,20 +158,20 @@ public class KdbxReaderTest {
 			final byte[] keyFileData = IoUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_PwdTxtKeyFile.txt"));
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray(), keyFileData);
 			final KdbxDatabase database = kdbxReader.readKdbxDatabase(credentials);
-			Assert.assertEquals("Test Database", database.getMeta().getDatabaseName());
+			assertEquals("Test Database", database.getMeta().getDatabaseName());
 
-			Assert.assertEquals(1, database.getGroups().size());
-			Assert.assertEquals("Database", database.getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().size());
+			assertEquals("Database", database.getGroups().get(0).getName());
 
-			Assert.assertEquals(6, database.getGroups().get(0).getGroups().size());
-			Assert.assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
+			assertEquals(6, database.getGroups().get(0).getGroups().size());
+			assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
 
-			Assert.assertEquals(2, database.getAllEntries().size());
-			Assert.assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
-			Assert.assertEquals("Test Pässword #2", database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
+			assertEquals(2, database.getAllEntries().size());
+			assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
+			assertEquals("Test Pässword #2", database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 	}
 
@@ -178,20 +182,20 @@ public class KdbxReaderTest {
 			final byte[] keyFileData = IoUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_PwdKeyFileV1.keyx"));
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray(), keyFileData);
 			final KdbxDatabase database = kdbxReader.readKdbxDatabase(credentials);
-			Assert.assertEquals("Test Database", database.getMeta().getDatabaseName());
+			assertEquals("Test Database", database.getMeta().getDatabaseName());
 
-			Assert.assertEquals(1, database.getGroups().size());
-			Assert.assertEquals("Database", database.getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().size());
+			assertEquals("Database", database.getGroups().get(0).getName());
 
-			Assert.assertEquals(6, database.getGroups().get(0).getGroups().size());
-			Assert.assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
+			assertEquals(6, database.getGroups().get(0).getGroups().size());
+			assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
 
-			Assert.assertEquals(2, database.getAllEntries().size());
-			Assert.assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
-			Assert.assertEquals("Test Pässword #2", database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
+			assertEquals(2, database.getAllEntries().size());
+			assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
+			assertEquals("Test Pässword #2", database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 	}
 
@@ -202,20 +206,20 @@ public class KdbxReaderTest {
 			final byte[] keyFileData = IoUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_PwdKeyFileV2.keyx"));
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray(), keyFileData);
 			final KdbxDatabase database = kdbxReader.readKdbxDatabase(credentials);
-			Assert.assertEquals("Test Database", database.getMeta().getDatabaseName());
+			assertEquals("Test Database", database.getMeta().getDatabaseName());
 
-			Assert.assertEquals(1, database.getGroups().size());
-			Assert.assertEquals("Database", database.getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().size());
+			assertEquals("Database", database.getGroups().get(0).getName());
 
-			Assert.assertEquals(6, database.getGroups().get(0).getGroups().size());
-			Assert.assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
+			assertEquals(6, database.getGroups().get(0).getGroups().size());
+			assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
 
-			Assert.assertEquals(2, database.getAllEntries().size());
-			Assert.assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
-			Assert.assertEquals("Test Pässword #2", database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
+			assertEquals(2, database.getAllEntries().size());
+			assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
+			assertEquals("Test Pässword #2", database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 	}
 
@@ -226,20 +230,20 @@ public class KdbxReaderTest {
 			final byte[] keyFileData = IoUtilities.toByteArray(getClass().getClassLoader().getResourceAsStream("kdbx/v4/Database_AES256_AES-KDF_KeyFile.keyx"));
 			final KdbxCredentials credentials = new KdbxCredentials(keyFileData);
 			final KdbxDatabase database = kdbxReader.readKdbxDatabase(credentials);
-			Assert.assertEquals("Test Database", database.getMeta().getDatabaseName());
+			assertEquals("Test Database", database.getMeta().getDatabaseName());
 
-			Assert.assertEquals(1, database.getGroups().size());
-			Assert.assertEquals("Database", database.getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().size());
+			assertEquals("Database", database.getGroups().get(0).getName());
 
-			Assert.assertEquals(6, database.getGroups().get(0).getGroups().size());
-			Assert.assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
+			assertEquals(6, database.getGroups().get(0).getGroups().size());
+			assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
 
-			Assert.assertEquals(2, database.getAllEntries().size());
-			Assert.assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
-			Assert.assertEquals("Test Pässword #2", database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
+			assertEquals(2, database.getAllEntries().size());
+			assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
+			assertEquals("Test Pässword #2", database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 	}
 
@@ -252,21 +256,21 @@ public class KdbxReaderTest {
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray());
 			database = kdbxReader.readKdbxDatabase(credentials);
 
-			Assert.assertEquals("3.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
+			assertEquals("3.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
 
-			Assert.assertEquals(null, database.getMeta().getDatabaseName());
+			assertEquals(null, database.getMeta().getDatabaseName());
 
-			Assert.assertEquals(1, database.getGroups().size());
-			Assert.assertEquals("Test Group", database.getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().size());
+			assertEquals("Test Group", database.getGroups().get(0).getName());
 
-			Assert.assertEquals(1, database.getGroups().get(0).getGroups().size());
-			Assert.assertEquals("RecycleBin", database.getGroups().get(0).getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().get(0).getGroups().size());
+			assertEquals("RecycleBin", database.getGroups().get(0).getGroups().get(0).getName());
 
-			Assert.assertEquals(1, database.getAllEntries().size());
-			Assert.assertEquals("Test Pässword", database.getEntryByUUID(KdbxUUID.fromHex("9AA8B51CB14AEE4FB3F4DB2C86B8E552")).getPassword());
+			assertEquals(1, database.getAllEntries().size());
+			assertEquals("Test Pässword", database.getEntryByUUID(KdbxUUID.fromHex("9AA8B51CB14AEE4FB3F4DB2C86B8E552")).getPassword());
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 
 		final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -274,37 +278,37 @@ public class KdbxReaderTest {
 		try (KdbxWriter kdbxWriter = new KdbxWriter(outputStream)) {
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray());
 			if (database == null) {
-				Assert.fail("Databse is null");
+				fail("Databse is null");
 				throw new RuntimeException();
 			}
 			kdbxWriter.writeKdbxDatabase(database, database.getHeaderFormat(), credentials);
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 
-		Assert.assertTrue(outputStream.size() > 0);
+		assertTrue(outputStream.size() > 0);
 
 		try (KdbxReader kdbxReader = new KdbxReader(new ByteArrayInputStream(outputStream.toByteArray()))) {
 			kdbxReader.setStrictMode(true);
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray());
 			database = kdbxReader.readKdbxDatabase(credentials);
 
-			Assert.assertEquals("3.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
+			assertEquals("3.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
 
-			Assert.assertEquals(null, database.getMeta().getDatabaseName());
+			assertEquals(null, database.getMeta().getDatabaseName());
 
-			Assert.assertEquals(1, database.getGroups().size());
-			Assert.assertEquals("Test Group", database.getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().size());
+			assertEquals("Test Group", database.getGroups().get(0).getName());
 
-			Assert.assertEquals(1, database.getGroups().get(0).getGroups().size());
-			Assert.assertEquals("RecycleBin", database.getGroups().get(0).getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().get(0).getGroups().size());
+			assertEquals("RecycleBin", database.getGroups().get(0).getGroups().get(0).getName());
 
-			Assert.assertEquals(1, database.getAllEntries().size());
-			Assert.assertEquals("Test Pässword", database.getEntryByUUID(KdbxUUID.fromHex("9AA8B51CB14AEE4FB3F4DB2C86B8E552")).getPassword());
+			assertEquals(1, database.getAllEntries().size());
+			assertEquals("Test Pässword", database.getEntryByUUID(KdbxUUID.fromHex("9AA8B51CB14AEE4FB3F4DB2C86B8E552")).getPassword());
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 	}
 
@@ -317,22 +321,22 @@ public class KdbxReaderTest {
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray());
 			database = kdbxReader.readKdbxDatabase(credentials);
 
-			Assert.assertEquals("3.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
+			assertEquals("3.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
 
-			Assert.assertEquals(null, database.getMeta().getDatabaseName());
+			assertEquals(null, database.getMeta().getDatabaseName());
 
-			Assert.assertEquals(1, database.getGroups().size());
-			Assert.assertEquals("Test Group", database.getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().size());
+			assertEquals("Test Group", database.getGroups().get(0).getName());
 
-			Assert.assertEquals(1, database.getGroups().get(0).getGroups().size());
-			Assert.assertEquals("RecycleBin", database.getGroups().get(0).getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().get(0).getGroups().size());
+			assertEquals("RecycleBin", database.getGroups().get(0).getGroups().get(0).getName());
 
-			Assert.assertEquals(2, database.getAllEntries().size());
-			Assert.assertEquals("Test Pässword", database.getEntryByUUID(KdbxUUID.fromHex("9AA8B51CB14AEE4FB3F4DB2C86B8E552")).getPassword());
-			Assert.assertArrayEquals((BOM.BOM_UTF_8_CHAR + "Binary Öne").getBytes(StandardCharsets.UTF_8), database.getEntryByUUID(KdbxUUID.fromHex("9AA8B51CB14AEE4FB3F4DB2C86B8E552")).getBinaries().get(0).getData());
+			assertEquals(2, database.getAllEntries().size());
+			assertEquals("Test Pässword", database.getEntryByUUID(KdbxUUID.fromHex("9AA8B51CB14AEE4FB3F4DB2C86B8E552")).getPassword());
+			assertArrayEquals((BOM.BOM_UTF_8_CHAR + "Binary Öne").getBytes(StandardCharsets.UTF_8), database.getEntryByUUID(KdbxUUID.fromHex("9AA8B51CB14AEE4FB3F4DB2C86B8E552")).getBinaries().get(0).getData());
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 
 		final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -340,38 +344,38 @@ public class KdbxReaderTest {
 		try (KdbxWriter kdbxWriter = new KdbxWriter(outputStream)) {
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray());
 			if (database == null) {
-				Assert.fail("Databse is null");
+				fail("Databse is null");
 				throw new RuntimeException();
 			}
 			kdbxWriter.writeKdbxDatabase(database, database.getHeaderFormat(), credentials);
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 
-		Assert.assertTrue(outputStream.size() > 0);
+		assertTrue(outputStream.size() > 0);
 
 		try (KdbxReader kdbxReader = new KdbxReader(new ByteArrayInputStream(outputStream.toByteArray()))) {
 			kdbxReader.setStrictMode(true);
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray());
 			database = kdbxReader.readKdbxDatabase(credentials);
 
-			Assert.assertEquals("3.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
+			assertEquals("3.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
 
-			Assert.assertEquals(null, database.getMeta().getDatabaseName());
+			assertEquals(null, database.getMeta().getDatabaseName());
 
-			Assert.assertEquals(1, database.getGroups().size());
-			Assert.assertEquals("Test Group", database.getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().size());
+			assertEquals("Test Group", database.getGroups().get(0).getName());
 
-			Assert.assertEquals(1, database.getGroups().get(0).getGroups().size());
-			Assert.assertEquals("RecycleBin", database.getGroups().get(0).getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().get(0).getGroups().size());
+			assertEquals("RecycleBin", database.getGroups().get(0).getGroups().get(0).getName());
 
-			Assert.assertEquals(2, database.getAllEntries().size());
-			Assert.assertEquals("Test Pässword", database.getEntryByUUID(KdbxUUID.fromHex("9AA8B51CB14AEE4FB3F4DB2C86B8E552")).getPassword());
-			Assert.assertArrayEquals((BOM.BOM_UTF_8_CHAR + "Binary Öne").getBytes(StandardCharsets.UTF_8), database.getEntryByUUID(KdbxUUID.fromHex("9AA8B51CB14AEE4FB3F4DB2C86B8E552")).getBinaries().get(0).getData());
+			assertEquals(2, database.getAllEntries().size());
+			assertEquals("Test Pässword", database.getEntryByUUID(KdbxUUID.fromHex("9AA8B51CB14AEE4FB3F4DB2C86B8E552")).getPassword());
+			assertArrayEquals((BOM.BOM_UTF_8_CHAR + "Binary Öne").getBytes(StandardCharsets.UTF_8), database.getEntryByUUID(KdbxUUID.fromHex("9AA8B51CB14AEE4FB3F4DB2C86B8E552")).getBinaries().get(0).getData());
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 	}
 
@@ -384,22 +388,22 @@ public class KdbxReaderTest {
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray());
 			database = kdbxReader.readKdbxDatabase(credentials);
 
-			Assert.assertEquals("4.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
+			assertEquals("4.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
 
-			Assert.assertEquals("Test Database", database.getMeta().getDatabaseName());
+			assertEquals("Test Database", database.getMeta().getDatabaseName());
 
-			Assert.assertEquals(1, database.getGroups().size());
-			Assert.assertEquals("Database", database.getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().size());
+			assertEquals("Database", database.getGroups().get(0).getName());
 
-			Assert.assertEquals(6, database.getGroups().get(0).getGroups().size());
-			Assert.assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
+			assertEquals(6, database.getGroups().get(0).getGroups().size());
+			assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
 
-			Assert.assertEquals(2, database.getAllEntries().size());
-			Assert.assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
-			Assert.assertArrayEquals((BOM.BOM_UTF_8_CHAR + "Binary Öne").getBytes(StandardCharsets.UTF_8), database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getBinaries().get(0).getData());
+			assertEquals(2, database.getAllEntries().size());
+			assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
+			assertArrayEquals((BOM.BOM_UTF_8_CHAR + "Binary Öne").getBytes(StandardCharsets.UTF_8), database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getBinaries().get(0).getData());
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 
 		final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -407,38 +411,38 @@ public class KdbxReaderTest {
 		try (KdbxWriter kdbxWriter = new KdbxWriter(outputStream)) {
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray());
 			if (database == null) {
-				Assert.fail("Databse is null");
+				fail("Databse is null");
 				throw new RuntimeException();
 			}
 			kdbxWriter.writeKdbxDatabase(database, database.getHeaderFormat(), credentials);
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 
-		Assert.assertTrue(outputStream.size() > 0);
+		assertTrue(outputStream.size() > 0);
 
 		try (KdbxReader kdbxReader = new KdbxReader(new ByteArrayInputStream(outputStream.toByteArray()))) {
 			kdbxReader.setStrictMode(true);
 			final KdbxCredentials credentials = new KdbxCredentials("Äbc123@".toCharArray());
 			database = kdbxReader.readKdbxDatabase(credentials);
 
-			Assert.assertEquals("4.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
+			assertEquals("4.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
 
-			Assert.assertEquals("Test Database", database.getMeta().getDatabaseName());
+			assertEquals("Test Database", database.getMeta().getDatabaseName());
 
-			Assert.assertEquals(1, database.getGroups().size());
-			Assert.assertEquals("Database", database.getGroups().get(0).getName());
+			assertEquals(1, database.getGroups().size());
+			assertEquals("Database", database.getGroups().get(0).getName());
 
-			Assert.assertEquals(6, database.getGroups().get(0).getGroups().size());
-			Assert.assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
+			assertEquals(6, database.getGroups().get(0).getGroups().size());
+			assertEquals("General", database.getGroups().get(0).getGroups().get(0).getName());
 
-			Assert.assertEquals(2, database.getAllEntries().size());
-			Assert.assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
-			Assert.assertArrayEquals((BOM.BOM_UTF_8_CHAR + "Binary Öne").getBytes(StandardCharsets.UTF_8), database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getBinaries().get(0).getData());
+			assertEquals(2, database.getAllEntries().size());
+			assertEquals("Test Password", database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getPassword());
+			assertArrayEquals((BOM.BOM_UTF_8_CHAR + "Binary Öne").getBytes(StandardCharsets.UTF_8), database.getEntryByUUID(KdbxUUID.fromHex("957C944A05D8E9489787D94EF07C8319")).getBinaries().get(0).getData());
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 	}
 
@@ -460,22 +464,22 @@ public class KdbxReaderTest {
 			e.printStackTrace();
 		}
 
-		Assert.assertTrue(outputStream.size() > 0);
+		assertTrue(outputStream.size() > 0);
 
 		try (KdbxReader kdbxReader = new KdbxReader(new ByteArrayInputStream(outputStream.toByteArray()))) {
 			kdbxReader.setStrictMode(true);
 			final KdbxCredentials credentials = new KdbxCredentials("MyDatabasePassword".toCharArray());
 			database = kdbxReader.readKdbxDatabase(credentials);
-			Assert.assertEquals("4.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
-			Assert.assertEquals("MyDatabase", database.getMeta().getDatabaseName());
-			Assert.assertEquals(1, database.getAllEntries().size());
-			Assert.assertEquals("MyEntry", database.getEntries().get(0).getTitle());
-			Assert.assertEquals("https://MyDomain", database.getEntries().get(0).getUrl());
-			Assert.assertEquals("MyUsernameForThisEntry", database.getEntries().get(0).getUsername());
-			Assert.assertEquals("MyPasswordForThisEntry", database.getEntries().get(0).getPassword());
+			assertEquals("4.1.0", database.getHeaderFormat().getDataFormatVersion().toString());
+			assertEquals("MyDatabase", database.getMeta().getDatabaseName());
+			assertEquals(1, database.getAllEntries().size());
+			assertEquals("MyEntry", database.getEntries().get(0).getTitle());
+			assertEquals("https://MyDomain", database.getEntries().get(0).getUrl());
+			assertEquals("MyUsernameForThisEntry", database.getEntries().get(0).getUsername());
+			assertEquals("MyPasswordForThisEntry", database.getEntries().get(0).getPassword());
 		} catch (final Exception e) {
 			e.printStackTrace();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		}
 	}
 }
