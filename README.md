@@ -1,5 +1,7 @@
 # kdbx
 
+[![Maven Central](https://img.shields.io/maven-central/v/de.soderer/kdbx?label=Maven%20Central)](https://central.sonatype.com/artifact/de.soderer/kdbx)
+
 **Java reader and writer for KeePass 2 database files (KDBX format)**
 
 Read and write KeePass databases in data format versions 3.x and 4.x directly from Java, including groups, entries, history, attachments, custom fields and auto-type settings. Files written by this library can be opened with KeePass 2 and other KDBX compatible applications.
@@ -19,6 +21,20 @@ Read and write KeePass databases in data format versions 3.x and 4.x directly fr
 
 - Java 11 or higher
 - [Bouncy Castle](https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk18on) (`bcprov-jdk18on`), used for Argon2, Salsa20 and the inner ChaCha20 stream
+
+## Maven
+
+This library is available on [Maven Central](https://central.sonatype.com/artifact/de.soderer/kdbx). The current version is shown in the badge above.
+
+```xml
+<dependency>
+	<groupId>de.soderer</groupId>
+	<artifactId>kdbx</artifactId>
+	<version>x.y.z</version>
+</dependency>
+```
+
+Bouncy Castle (`org.bouncycastle:bcprov-jdk18on`) is needed at runtime.
 
 ## Supported algorithms
 
@@ -142,25 +158,3 @@ try (KdbxWriter kdbxWriter = new KdbxWriter(new FileOutputStream("MyKeePassDatab
 - `KdbxReader` and `KdbxWriter` close the given stream.
 - A database read from a file can be changed and written again, also several times. Attachments stay available in the entries.
 - With `kdbxReader.setStrictMode(true)` unknown XML elements and a missing KDBX 3.x header hash are rejected instead of ignored.
-
-## Release notes
-
-### Release 3.0.0
-- Fixed reading and writing of KDBX 3.x payloads larger than 1 MiB (HashedBlockStream with several blocks)
-- New random crypto values for every write (no reuse of key and nonce when saving twice)
-- Attachments are kept after writing and attachments of history entries are supported
-- Reading of KDBX 4 attachments with memory protection flag (e.g. written by pykeepass or KeePassXC)
-- Key file detection compatible with KeePass and KeePassXC
-- Protected custom fields stay protected, `MasterKeyChanged` only changes with changed credentials
-- Detection of truncated KDBX 4 files, protection against excessive KDF parameters in KDBX 3.x files
-- ChaCha20 payload encryption uses the JDK cipher, Bouncy Castle is no longer registered as global JCA provider
-- Several fixes: auto-type associations, date format of KDBX 3.x, group settings "inherit", UUID paths, nested group lookup
-- Javadoc for the complete API
-- API changes: public fields of data classes are private, unused helper methods were removed from `Utilities` and `Version`
-
-### Release 2.0.0
-- Binary attachment support
-- Improved internal header data storage
-
-### Release 1.0.0
-- `KdbxWriter` and `KdbxReader` for data format versions 3.x and 4.x; created KDBX files are read by KeePass 2 without errors
