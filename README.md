@@ -1,118 +1,166 @@
 # kdbx
-Java Kdbx File Format Reader and Writer (KeePass2 file format)
 
-Release 2.0.0:
-- Binary Attachment support
-- Improved internal header data storage
+**Java reader and writer for KeePass 2 database files (KDBX format)**
 
-Release 1.0.0:
-- KdbxWriter and -Reader for Dataversion 3.x && 4.x is now working and created kdbx files are read by the KeePass2 application without errors.
+Read and write KeePass databases in data format versions 3.x and 4.x directly from Java, including groups, entries, history, attachments, custom fields and auto-type settings. Files written by this library can be opened with KeePass 2 and other KDBX compatible applications.
 
-## Dependencies:
-- JAVA 11
-- Bouncy Castle Crypto Provider
-    (current version "1.80", see: "https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk18on" for download)
+## Features
 
-## Supported encryption algorithms:
-- AES 128
-- AES 256
-- Salsa20
-- ChaCha20
+- Reading of KDBX 3.x and 4.x files, writing of KDBX 3.1 and 4.x files
+- Groups and entries in any nesting depth, including entries on root level
+- Entry history, attachments (also of history entries) and custom fields
+- Protected values: custom fields read as protected stay protected when written again
+- Auto-type settings, custom icons, custom data, deleted objects and meta data
+- Fresh random master seed, IV, KDF salt and inner stream key for every write
+- `MasterKeyChanged` is only updated when the credentials have actually changed
+- Hardened against crafted files: XXE protection, limits for KDF parameters and block sizes, verification of all HMAC blocks (detects truncated files)
 
-## Supported KDF (Key Derivation Function) algorithms:
-- AES_KDBX3
-- AES_KDBX4
-- ARGON2D
-- ARGON2ID
+## Requirements
 
-## Supported credential types:
-- Password only
-- Password with keyfile (simple keyfile like txt or Kdbx keyfile version 1.00 and 2.0)
-- Keyfile only (simple keyfile like txt or Kdbx keyfile version 1.00 and 2.0)
-- NOT SUPPORTED: Windows user account
+- Java 11 or higher
+- [Bouncy Castle](https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk18on) (`bcprov-jdk18on`), used for Argon2, Salsa20 and the inner ChaCha20 stream
 
-## Code examples
-### KdbxReader example with simple password:
+## Supported algorithms
+
+| Purpose | Algorithms |
+|---|---|
+| Payload encryption | AES-256 (KDBX 3.x and 4.x), ChaCha20 (KDBX 4.x) |
+| Protection of values | Salsa20, ChaCha20 |
+| Key derivation (KDF) | AES-KDF (KDBX 3.x and 4.x), Argon2d, Argon2id |
+| Compression | GZip or none |
+
+Not supported: Twofish (KeePass plugin), ArcFour inner stream.
+
+## Supported credentials
+
+- Password
+- Key file
+- Password and key file
+
+Key file formats are detected in the same order as KeePass and KeePassXC do:
+
+1. XML key file version 1.0 or 2.0 (`.keyx` / `.key`), with verification of the integrity hash of version 2.0
+2. Exactly 32 bytes, used directly as key
+3. Exactly 64 hexadecimal characters
+4. Any other file content, hashed with SHA-256
+
+Not supported: Windows user account.
+
+## Usage
+
+### Reading a database with a password
+
 ```java
 try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDatabase.kdbx"))) {
 	final KdbxDatabase database = kdbxReader.readKdbxDatabase("MyPassword".toCharArray());
-	System.out.println("Databasename: " + database.getMeta().getDatabaseName()));
-	System.out.println("Number of groups on first level: " + database.getGroups().size());
-	System.out.println("Groupname: " + database.getGroups().get(0).getName());
-	System.out.println("Number of groups within other group: " + database.getGroups().get(0).getGroups().size());
-	System.out.println("Groupname of deeper group: " + database.getGroups().get(0).getGroups().get(0).getName());
-	System.out.println("Overall number of stored entries: " + database.getAllEntries().size());
-	System.out.println("Username of entry: " + database.getEntryByUUID(database.getGroups().get(0).getEntries().get(0)).getUsername());
-	System.out.println("Password of entry: " + database.getEntryByUUID(database.getGroups().get(0).getEntries().get(0)).getPassword());
-	System.out.println("Password of special entry: " + database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA")).getPassword());
-} catch (final Exception e) {
-	e.printStackTrace();
+
+	System.out.println("Database name: " + database.getMeta().getDatabaseName());
+	System.out.println("Number of top level groups: " + database.getGroups().size());
+	System.out.println("Number of all entries: " + database.getAllEntries().size());
+
+	final KdbxGroup group = database.getGroups().get(0);
+	System.out.println("Group name: " + group.getName());
+
+	final KdbxEntry entry = group.getEntries().get(0);
+	System.out.println("Username: " + entry.getUsername());
+	System.out.println("Password: " + entry.getPassword());
+
+	final KdbxEntry specialEntry = database.getEntryByUUID(KdbxUUID.fromHex("FE30E9479289424F81439234970F59AA"));
+	System.out.println("Password of special entry: " + specialEntry.getPassword());
 }
 ```
 
-### KdbxReader example with password and keyfile:
+### Reading a database with password and key file
+
 ```java
+final byte[] keyFileData = Files.readAllBytes(Paths.get("MyKeePassKeyFile.keyx"));
+final KdbxCredentials credentials = new KdbxCredentials("MyPassword".toCharArray(), keyFileData);
+
 try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDatabase.kdbx"))) {
-	final byte[] keyFileData = Utilities.toByteArray(new FileInputStream("MyKeePassKeyFile.keyx"));
-	final KdbxCredentials credentials = new KdbxCredentials("MyPassword".toCharArray(), keyFileData);
 	final KdbxDatabase database = kdbxReader.readKdbxDatabase(credentials);
-	System.out.println("Overall number of stored entries: " + database.getAllEntries().size());
-} catch (final Exception e) {
-	e.printStackTrace();
+	System.out.println("Number of all entries: " + database.getAllEntries().size());
 }
 ```
 
-### KdbxWriter example with simple password:
+### Creating and writing a database (KDBX 4)
+
 ```java
-KdbxDatabase database = new KdbxDatabase();
+final KdbxDatabase database = new KdbxDatabase();
 database.getMeta().setDatabaseName("MyDatabase");
 
-final KdbxEntry kdbxEntry = new KdbxEntry();
-kdbxEntry.setTitle("MyEntry");
-kdbxEntry.setUrl("https://MyDomain");
-kdbxEntry.setUsername("MyUsernameForThisEntry");
-kdbxEntry.setPassword("MyPasswordForThisEntry");
-database.getEntries().add(kdbxEntry);
+final KdbxGroup group = new KdbxGroup().withName("Internet");
+database.getGroups().add(group);
 
-// KDBX default data version v4
+final KdbxEntry entry = new KdbxEntry()
+	.withTitle("MyEntry")
+	.withUrl("https://example.com")
+	.withUsername("MyUsername")
+	.withPassword("MyPassword");
+group.getEntries().add(entry);
+
+// Custom field, which is stored as protected value
+entry.setItem("PIN", "1234");
+entry.setItemProtected("PIN", true);
+
+// Attachment
+entry.getBinaries().add(new KdbxEntryBinary().withKey("notes.txt").withData("Some text".getBytes(StandardCharsets.UTF_8)));
+
 try (KdbxWriter kdbxWriter = new KdbxWriter(new FileOutputStream("MyKeePassDatabase.kdbx"))) {
 	kdbxWriter.writeKdbxDatabase(database, "MyDatabasePassword".toCharArray());
-} catch (final Exception e) {
-	e.printStackTrace();
-}
-
-try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDatabase.kdbx"))) {
-	database = kdbxReader.readKdbxDatabase("MyDatabasePassword".toCharArray());
-	System.out.println(database.getHeaderFormat().getDataFormatVersion().toString());
-	System.out.println(database.getMeta().getDatabaseName());
-	System.out.println(database.getAllEntries().size());
-	System.out.println(database.getEntries().get(0).getTitle());
-	System.out.println(database.getEntries().get(0).getUrl());
-	System.out.println(database.getEntries().get(0).getUsername());
-	System.out.println(database.getEntries().get(0).getPassword());
-} catch (final Exception e) {
-	e.printStackTrace();
-}
-
-// KDBX data version v3
-try (KdbxWriter kdbxWriter = new KdbxWriter(new FileOutputStream("MyKeePassDatabase_v3.kdbx"))) {
-	KdbxHeaderFormat headerFormat = new KdbxHeaderFormat3();
-	headerFormat.setInnerEncryptionAlgorithm(InnerEncryptionAlgorithm.SALSA20);
-	kdbxWriter.writeKdbxDatabase(database, headerFormat, "MyDatabasePassword".toCharArray());
-} catch (final Exception e) {
-	e.printStackTrace();
-}
-
-try (KdbxReader kdbxReader = new KdbxReader(new FileInputStream("MyKeePassDatabase_v3.kdbx"))) {
-	database = kdbxReader.readKdbxDatabase("MyDatabasePassword".toCharArray());
-	System.out.println(database.getHeaderFormat().getDataFormatVersion().toString());
-	System.out.println(database.getMeta().getDatabaseName());
-	System.out.println(database.getAllEntries().size());
-	System.out.println(database.getEntries().get(0).getTitle());
-	System.out.println(database.getEntries().get(0).getUrl());
-	System.out.println(database.getEntries().get(0).getUsername());
-	System.out.println(database.getEntries().get(0).getPassword());
-} catch (final Exception e) {
-	e.printStackTrace();
 }
 ```
+
+### Writing in data format KDBX 3.1
+
+```java
+final KdbxHeaderFormat3 headerFormat = new KdbxHeaderFormat3();
+headerFormat.setInnerEncryptionAlgorithm(InnerEncryptionAlgorithm.SALSA20);
+
+try (KdbxWriter kdbxWriter = new KdbxWriter(new FileOutputStream("MyKeePassDatabase_v3.kdbx"))) {
+	kdbxWriter.writeKdbxDatabase(database, headerFormat, "MyDatabasePassword".toCharArray());
+}
+```
+
+### Choosing encryption and key derivation (KDBX 4)
+
+```java
+final KdbxHeaderFormat4 headerFormat = new KdbxHeaderFormat4()
+	.withOuterEncryptionAlgorithm(OuterEncryptionAlgorithm.CHACHA20)
+	.withKeyDerivationFunctionInfo(new KeyDerivationFunctionInfoArgon()
+		.withType(KeyDerivationFunctionInfoArgon.Argon2Type.Argon2_ID)
+		.withIterations(3)
+		.withMemoryInBytes(64 * 1024 * 1024)
+		.withParallelism(2));
+
+try (KdbxWriter kdbxWriter = new KdbxWriter(new FileOutputStream("MyKeePassDatabase.kdbx"))) {
+	kdbxWriter.writeKdbxDatabase(database, headerFormat, new KdbxCredentials("MyDatabasePassword".toCharArray()));
+}
+```
+
+### Notes
+
+- `KdbxReader` and `KdbxWriter` close the given stream.
+- A database read from a file can be changed and written again, also several times. Attachments stay available in the entries.
+- With `kdbxReader.setStrictMode(true)` unknown XML elements and a missing KDBX 3.x header hash are rejected instead of ignored.
+
+## Release notes
+
+### Release 3.0.0
+- Fixed reading and writing of KDBX 3.x payloads larger than 1 MiB (HashedBlockStream with several blocks)
+- New random crypto values for every write (no reuse of key and nonce when saving twice)
+- Attachments are kept after writing and attachments of history entries are supported
+- Reading of KDBX 4 attachments with memory protection flag (e.g. written by pykeepass or KeePassXC)
+- Key file detection compatible with KeePass and KeePassXC
+- Protected custom fields stay protected, `MasterKeyChanged` only changes with changed credentials
+- Detection of truncated KDBX 4 files, protection against excessive KDF parameters in KDBX 3.x files
+- ChaCha20 payload encryption uses the JDK cipher, Bouncy Castle is no longer registered as global JCA provider
+- Several fixes: auto-type associations, date format of KDBX 3.x, group settings "inherit", UUID paths, nested group lookup
+- Javadoc for the complete API
+- API changes: public fields of data classes are private, unused helper methods were removed from `Utilities` and `Version`
+
+### Release 2.0.0
+- Binary attachment support
+- Improved internal header data storage
+
+### Release 1.0.0
+- `KdbxWriter` and `KdbxReader` for data format versions 3.x and 4.x; created KDBX files are read by KeePass 2 without errors

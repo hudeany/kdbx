@@ -1,16 +1,17 @@
 package de.soderer.utilities.kdbx;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.security.Security;
 import java.security.spec.AlgorithmParameterSpec;
 import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashSet;
@@ -20,10 +21,10 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.zip.GZIPOutputStream;
 
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.CipherOutputStream;
 import javax.crypto.Mac;
+import javax.crypto.spec.ChaCha20ParameterSpec;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.xml.transform.OutputKeys;
@@ -40,7 +41,6 @@ import org.bouncycastle.crypto.engines.ChaCha7539Engine;
 import org.bouncycastle.crypto.engines.Salsa20Engine;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -48,7 +48,6 @@ import org.w3c.dom.Node;
 import de.soderer.utilities.kdbx.data.KdbxBinary;
 import de.soderer.utilities.kdbx.data.KdbxConstants.InnerEncryptionAlgorithm;
 import de.soderer.utilities.kdbx.data.KdbxConstants.OuterEncryptionAlgorithm;
-import de.soderer.utilities.kdbx.data.KdbxConstants.PayloadBlockType;
 import de.soderer.utilities.kdbx.data.KdbxCustomDataItem;
 import de.soderer.utilities.kdbx.data.KdbxEntry;
 import de.soderer.utilities.kdbx.data.KdbxEntryBinary;
@@ -66,57 +65,163 @@ import de.soderer.utilities.kdbx.utilities.Utilities;
 import de.soderer.utilities.kdbx.utilities.Version;
 
 /**
- * Binary attachments The same data should not be stored multiple times.
- * Dataversion <= 3.1 --> stored in KdbxMeta binaries Dataversion >= 4.0 -->
- * stored in KdbxInnerHeaderType.BINARY_ATTACHMENT
+ * Writer for KeePass database files in the KDBX format (data format versions 3.1 and 4.0).
+ * <p>
+ * Example:
+ * <pre>
+ * try (KdbxWriter writer = new KdbxWriter(new FileOutputStream(file))) {
+ * 	writer.writeKdbxDatabase(database, password);
+ * }
+ * </pre>
+ * <p>
+ * Binary attachments are stored only once, even if several entries contain the same data.
+ * In data format version 3.1 they are stored in the meta data binaries, in version 4.0 in the inner header.
+ * <p>
+ * Each write generates new random values for master seed, encryption IV, key derivation salt and inner stream key.
+ * The writer closes the given output stream after writing or when it is closed itself.
  */
 public class KdbxWriter implements AutoCloseable {
+	/**
+	 * Block size of the KDBX 3.x HashedBlockStream, as used by KeePass.
+	 */
+	private static final int PAYLOAD_BLOCK_SIZE = 1024 * 1024;
+
+	/**
+	 * Stream for the KDBX file data.
+	 */
 	private final OutputStream outputStream;
 
+	/**
+	 * Additional item keys, which are always written as protected values in addition to those defined by the memory protection settings of the database.
+	 */
 	private Set<String> additionalKeyNamesToEncrypt = null;
 
+	/**
+	 * Creates a writer for KDBX file data.
+	 *
+	 * @param outputStream stream for the KDBX file data, which will be closed by this writer
+	 */
 	public KdbxWriter(final OutputStream outputStream) {
 		this.outputStream = outputStream;
 	}
 
+	/**
+	 * Sets the additional item keys, which are always written as protected values in addition to those defined by the memory protection settings of the database.
+	 *
+	 * @param additionalKeyNamesToEncrypt the additional item keys, which are always written as protected values in addition to those defined by the memory protection settings of the database
+	 */
 	public void setAdditionalKeyNamesToEncrypt(final Set<String> additionalKeyNamesToEncrypt) {
 		this.additionalKeyNamesToEncrypt = additionalKeyNamesToEncrypt;
 	}
 
+	/**
+	 * Sets the additional item keys, which are always written as protected values in addition to those defined by the memory protection settings of the database and returns this object for method chaining.
+	 *
+	 * @param newAdditionalKeyNamesToEncrypt the additional item keys, which are always written as protected values in addition to those defined by the memory protection settings of the database
+	 * @return this object
+	 */
 	public KdbxWriter withAdditionalKeyNamesToEncrypt(final Set<String> newAdditionalKeyNamesToEncrypt) {
 		setAdditionalKeyNamesToEncrypt(newAdditionalKeyNamesToEncrypt);
 		return this;
 	}
 
+	/**
+	 * Writes the database in data format version 4.0, protected by a password.
+	 *
+	 * @param database the database to write
+	 * @param password the master password
+	 * @throws Exception if the database is invalid or encryption fails
+	 */
 	public void writeKdbxDatabase(final KdbxDatabase database, final char[] password) throws Exception {
 		writeKdbxDatabase(database, null, new KdbxCredentials(password));
 	}
 
+	/**
+	 * Writes the database in the data format of the given header, protected by a password.
+	 *
+	 * @param database the database to write
+	 * @param headerFormat header format, which defines data format version and encryption settings, or null for the default version 4.0 header
+	 * @param password the master password
+	 * @throws Exception if the database is invalid or encryption fails
+	 */
 	public void writeKdbxDatabase(final KdbxDatabase database, final KdbxHeaderFormat headerFormat, final char[] password) throws Exception {
 		writeKdbxDatabase(database, headerFormat, new KdbxCredentials(password));
 	}
 
+	/**
+	 * Writes the database in data format version 4.0.
+	 *
+	 * @param database the database to write
+	 * @param credentials the credentials (password and/or key file)
+	 * @throws Exception if the database is invalid or encryption fails
+	 */
 	public void writeKdbxDatabase(final KdbxDatabase database, final KdbxCredentials credentials) throws Exception {
 		writeKdbxDatabase(database, null, credentials);
 	}
 
+	/**
+	 * Writes the database in the data format of the given header.
+	 * <p>
+	 * The database is validated first (see {@link KdbxDatabase#validate()}).
+	 * The "MasterKeyChanged" time of the meta data is only updated, if the credentials differ from those of the last read or write of this database object.
+	 *
+	 * @param database the database to write
+	 * @param headerFormat header format, which defines data format version and encryption settings, or null for the default version 4.0 header
+	 * @param credentials the credentials (password and/or key file)
+	 * @throws Exception if the database is invalid or encryption fails
+	 */
 	public void writeKdbxDatabase(final KdbxDatabase database, KdbxHeaderFormat headerFormat, final KdbxCredentials credentials) throws Exception {
 		database.validate();
-
-		database.getMeta().setMasterKeyChanged(ZonedDateTime.now());
 
 		if (headerFormat == null) {
 			headerFormat = new KdbxHeaderFormat4();
 		}
 
-		if (headerFormat instanceof KdbxHeaderFormat3) {
-			writeEncryptedDataVersion3((KdbxHeaderFormat3) headerFormat, outputStream, credentials, database);
-		} else {
-			writeEncryptedDataVersion4((KdbxHeaderFormat4) headerFormat, outputStream, credentials, database);
+		final byte[] compositeKeyHash = credentials.createCompositeKeyHash();
+		try {
+			// MasterKeyChanged is only updated, if the credentials differ from the ones used for the last read or write of this database
+			if (database.getMeta().getMasterKeyChanged() == null || !database.isSameCredentials(compositeKeyHash)) {
+				database.getMeta().setMasterKeyChanged(ZonedDateTime.now());
+			}
+
+			writeDatabase(database, headerFormat, compositeKeyHash);
+
+			database.rememberCredentials(compositeKeyHash);
+		} finally {
+			Arrays.fill(compositeKeyHash, (byte) 0);
 		}
 	}
 
-	private void writeEncryptedDataVersion3(final KdbxHeaderFormat3 headerFormat, final OutputStream dataOutputStream, final KdbxCredentials credentials, final KdbxDatabase database) throws Exception {
+	/**
+	 * Writes the database with new random crypto values in the header.
+	 *
+	 * @param database the validated database
+	 * @param headerFormat header format
+	 * @param compositeKeyHash hash of the composite key of the credentials
+	 * @throws Exception if encryption fails
+	 */
+	private void writeDatabase(final KdbxDatabase database, final KdbxHeaderFormat headerFormat, final byte[] compositeKeyHash) throws Exception {
+		// Every write needs new random master seed, encryption IV, KDF salt and inner stream key.
+		// Reusing them (e.g. when saving the same database twice) would reuse key and nonce of the stream ciphers.
+		headerFormat.resetCryptoKeys();
+
+		if (headerFormat instanceof KdbxHeaderFormat3) {
+			writeEncryptedDataVersion3((KdbxHeaderFormat3) headerFormat, outputStream, compositeKeyHash, database);
+		} else {
+			writeEncryptedDataVersion4((KdbxHeaderFormat4) headerFormat, outputStream, compositeKeyHash, database);
+		}
+	}
+
+	/**
+	 * Writes the database in data format version 3.1: header, AES-CBC encrypted HashedBlockStream with the (compressed) XML payload.
+	 *
+	 * @param headerFormat header format
+	 * @param dataOutputStream stream for the file data
+	 * @param compositeKeyHash hash of the composite key of the credentials
+	 * @param database the database
+	 * @throws Exception if encryption fails
+	 */
+	private void writeEncryptedDataVersion3(final KdbxHeaderFormat3 headerFormat, final OutputStream dataOutputStream, final byte[] compositeKeyHash, final KdbxDatabase database) throws Exception {
 		final byte[] outerHeadersDataBytes = headerFormat.getHeaderBytes();
 		dataOutputStream.write(outerHeadersDataBytes);
 
@@ -135,10 +240,15 @@ public class KdbxWriter implements AutoCloseable {
 		if (headerFormat.isCompressData()) {
 			decryptedPayload = Utilities.gzip(decryptedPayload);
 		}
-		TypeHashLengthValueStructure.write(payloadStream, PayloadBlockType.PAYLOAD.getId(), decryptedPayload, "SHA-256");
-		TypeHashLengthValueStructure.write(payloadStream, PayloadBlockType.END_OF_PAYLOAD.getId(), null, "SHA-256");
+		// KDBX 3 HashedBlockStream: Blocks of 1 MiB with consecutive block index, terminated by an empty block
+		int blockIndex = 0;
+		for (int offset = 0; offset < decryptedPayload.length; offset += PAYLOAD_BLOCK_SIZE) {
+			final byte[] blockData = Arrays.copyOfRange(decryptedPayload, offset, Math.min(decryptedPayload.length, offset + PAYLOAD_BLOCK_SIZE));
+			TypeHashLengthValueStructure.write(payloadStream, blockIndex++, blockData, "SHA-256");
+		}
+		TypeHashLengthValueStructure.write(payloadStream, blockIndex, null, "SHA-256");
 
-		final byte[] encryptionKey = headerFormat.getEncryptionKey(credentials.createCompositeKeyHash());
+		final byte[] encryptionKey = headerFormat.getEncryptionKey(compositeKeyHash);
 
 		byte[] encryptedData;
 		try {
@@ -154,10 +264,8 @@ public class KdbxWriter implements AutoCloseable {
 			final AlgorithmParameterSpec paramSpec = new IvParameterSpec(headerFormat.getEncryptionIV());
 			cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, paramSpec);
 			encryptedData = cipher.doFinal(payloadStream.toByteArray());
-		} catch (final BadPaddingException e) {
-			throw new Exception("Decryption failed because of bad padding", e);
 		} catch (final Exception e) {
-			throw new Exception("Decryption failed", e);
+			throw new Exception("Encryption failed", e);
 		}
 
 		dataOutputStream.write(encryptedData);
@@ -165,14 +273,23 @@ public class KdbxWriter implements AutoCloseable {
 		dataOutputStream.close();
 	}
 
-	private void writeEncryptedDataVersion4(final KdbxHeaderFormat4 headerFormat, final OutputStream dataOutputStream, final KdbxCredentials credentials, final KdbxDatabase database) throws Exception {
+	/**
+	 * Writes the database in data format version 4.0: header with SHA-256 and HMAC, encrypted HMAC block stream with inner header and (compressed) XML payload.
+	 *
+	 * @param headerFormat header format
+	 * @param dataOutputStream stream for the file data
+	 * @param compositeKeyHash hash of the composite key of the credentials
+	 * @param database the database
+	 * @throws Exception if encryption fails
+	 */
+	private void writeEncryptedDataVersion4(final KdbxHeaderFormat4 headerFormat, final OutputStream dataOutputStream, final byte[] compositeKeyHash, final KdbxDatabase database) throws Exception {
 		final byte[] outerHeadersDataBytes = headerFormat.getHeaderBytes();
 		dataOutputStream.write(outerHeadersDataBytes);
 
 		final byte[] sha256Hash = MessageDigest.getInstance("SHA-256").digest(outerHeadersDataBytes);
 		dataOutputStream.write(sha256Hash);
 
-		final byte[] encryptionKey = headerFormat.getEncryptionKey(credentials.createCompositeKeyHash());
+		final byte[] encryptionKey = headerFormat.getEncryptionKey(compositeKeyHash);
 		final byte[] transformedKey = Utilities.concatArrays(headerFormat.getMasterSeed(), encryptionKey);
 		final byte[] finalKey = MessageDigest.getInstance("SHA-256").digest(transformedKey);
 
@@ -204,10 +321,10 @@ public class KdbxWriter implements AutoCloseable {
 					paramSpec = new IvParameterSpec(headerFormat.getEncryptionIV());
 					break;
 				case CHACHA20:
-					Security.addProvider(new BouncyCastleProvider());
+					// ChaCha20 (RFC 7539) with 96 bit nonce and initial block counter 0, provided by the JDK since Java 11
 					cipher = Cipher.getInstance("ChaCha20");
 					secretKeySpec = new SecretKeySpec(finalKey, "ChaCha20");
-					paramSpec = new IvParameterSpec(headerFormat.getEncryptionIV());
+					paramSpec = new ChaCha20ParameterSpec(headerFormat.getEncryptionIV(), 0);
 					break;
 				case TWOFISH:
 					throw new IllegalArgumentException("Cipher " + headerFormat.getOuterEncryptionAlgorithm() + " is not implemented yet");
@@ -229,6 +346,15 @@ public class KdbxWriter implements AutoCloseable {
 		dataOutputStream.close();
 	}
 
+	/**
+	 * Creates the XML document of the database. Protected values are encrypted with the inner stream cipher in document order.
+	 *
+	 * @param database the database
+	 * @param dataFormatVersion data format version
+	 * @param innerEncryptionCipher inner stream cipher or null for no protection
+	 * @return the XML document
+	 * @throws Exception if the document cannot be created
+	 */
 	private Document createXmlDocument(final KdbxDatabase database, final Version dataFormatVersion, final StreamCipher innerEncryptionCipher) throws Exception {
 		final Set<String> keyNamesToEncrypt = new HashSet<>();
 		final KdbxMemoryProtection memoryProtection = database.getMeta().getMemoryProtection();
@@ -263,6 +389,14 @@ public class KdbxWriter implements AutoCloseable {
 		return document;
 	}
 
+	/**
+	 * Serializes an XML node as UTF-8 or other encoded text.
+	 *
+	 * @param pDocument the node to serialize
+	 * @param encoding the character encoding
+	 * @return the serialized XML data
+	 * @throws Exception if the transformation fails
+	 */
 	public static byte[] convertXML2ByteArray(final Node pDocument, final Charset encoding) throws Exception {
 		TransformerFactory transformerFactory = null;
 		Transformer transformer = null;
@@ -301,6 +435,14 @@ public class KdbxWriter implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Writes the "Meta" node.
+	 *
+	 * @param dataFormatVersion data format version
+	 * @param xmlDocumentRootNode root node of the document
+	 * @param meta the meta data
+	 * @return the created "Meta" node
+	 */
 	private static Node writeMetaNode(final Version dataFormatVersion, final Node xmlDocumentRootNode, final KdbxMeta meta) {
 		final Node metaNode = Utilities.appendNode(xmlDocumentRootNode, "Meta");
 		if (meta.getGenerator() != null) {
@@ -336,6 +478,9 @@ public class KdbxWriter implements AutoCloseable {
 		}
 		if (meta.getMasterKeyChangeForce() > -1) {
 			Utilities.appendTextValueNode(metaNode, "MasterKeyChangeForce", formatIntegerValue(meta.getMasterKeyChangeForce()));
+		}
+		if (meta.isMasterKeyChangeForceOnce()) {
+			Utilities.appendTextValueNode(metaNode, "MasterKeyChangeForceOnce", formatBooleanValue(true));
 		}
 		Utilities.appendTextValueNode(metaNode, "RecycleBinEnabled", formatBooleanValue(meta.isRecycleBinEnabled()));
 		if (meta.getRecycleBinUUID() != null) {
@@ -373,6 +518,12 @@ public class KdbxWriter implements AutoCloseable {
 		return metaNode;
 	}
 
+	/**
+	 * Writes the "CustomIcons" node.
+	 *
+	 * @param metaNode the "Meta" node
+	 * @param customIcons the icon data by icon UUID
+	 */
 	private static void writeCustomIcons(final Node metaNode, final Map<KdbxUUID, byte[]> customIcons) {
 		final Node customIconsNode = Utilities.appendNode(metaNode, "CustomIcons");
 		for (final Entry<KdbxUUID, byte[]> customIcon : customIcons.entrySet()) {
@@ -382,6 +533,12 @@ public class KdbxWriter implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Writes the "MemoryProtection" node.
+	 *
+	 * @param metaNode the "Meta" node
+	 * @param memoryProtection the memory protection settings
+	 */
 	private static void writeMemoryProtectionNode(final Node metaNode, final KdbxMemoryProtection memoryProtection) {
 		final Node memoryProtectionNode = Utilities.appendNode(metaNode, "MemoryProtection");
 		Utilities.appendTextValueNode(memoryProtectionNode, "ProtectTitle", formatBooleanValue(memoryProtection.isProtectTitle()));
@@ -391,6 +548,15 @@ public class KdbxWriter implements AutoCloseable {
 		Utilities.appendTextValueNode(memoryProtectionNode, "ProtectNotes", formatBooleanValue(memoryProtection.isProtectNotes()));
 	}
 
+	/**
+	 * Writes the "Root" node with groups, entries and deleted objects.
+	 *
+	 * @param innerEncryptionCipher inner stream cipher or null for no protection
+	 * @param keyNamesToEncrypt item keys, which are always protected
+	 * @param dataFormatVersion data format version
+	 * @param xmlDocumentRootNode root node of the document
+	 * @param database the database
+	 */
 	private void writeRootNode(final StreamCipher innerEncryptionCipher, final Set<String> keyNamesToEncrypt, final Version dataFormatVersion, final Node xmlDocumentRootNode, final KdbxDatabase database) {
 		final Node rootNode = Utilities.appendNode(xmlDocumentRootNode, "Root");
 		for (final KdbxGroup group : database.getGroups()) {
@@ -404,6 +570,13 @@ public class KdbxWriter implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Writes the binary attachments to the "Binaries" node of the meta data (KDBX 3.x).
+	 *
+	 * @param metaNode the "Meta" node
+	 * @param database the database
+	 * @throws Exception if the data cannot be compressed
+	 */
 	private static void writeBinariesToMeta(final Node metaNode, final KdbxDatabase database) throws Exception {
 		final Node binariesNode = Utilities.appendNode(metaNode, "Binaries");
 		for (final KdbxBinary binaryAttachment : database.getBinaryAttachments()) {
@@ -419,17 +592,30 @@ public class KdbxWriter implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Writes a "Group" node including its subgroups and entries.
+	 *
+	 * @param innerEncryptionCipher inner stream cipher or null for no protection
+	 * @param keyNamesToEncrypt item keys, which are always protected
+	 * @param dataFormatVersion data format version
+	 * @param baseNode parent node
+	 * @param group the group
+	 */
 	private void writeGroupNode(final StreamCipher innerEncryptionCipher, final Set<String> keyNamesToEncrypt, final Version dataFormatVersion, final Node baseNode, final KdbxGroup group) {
 		final Node groupNode = Utilities.appendNode(baseNode, "Group");
 		Utilities.appendTextValueNode(groupNode, "UUID", formatKdbxUUIDValue(group.getUuid()));
 		Utilities.appendTextValueNode(groupNode, "Name", group.getName());
 		Utilities.appendTextValueNode(groupNode, "Notes", group.getNotes());
-		Utilities.appendTextValueNode(groupNode, "IconID", formatIntegerValue(group.getIconID()));
+		if (group.getIconID() != null) {
+			Utilities.appendTextValueNode(groupNode, "IconID", formatIntegerValue(group.getIconID()));
+		}
 		Utilities.appendTextValueNode(groupNode, "IsExpanded", formatBooleanValue(group.isExpanded()));
 		Utilities.appendTextValueNode(groupNode, "DefaultAutoTypeSequence", group.getDefaultAutoTypeSequence());
-		Utilities.appendTextValueNode(groupNode, "EnableAutoType", formatBooleanValue(group.isEnableAutoType()));
-		Utilities.appendTextValueNode(groupNode, "EnableSearching", formatBooleanValue(group.isEnableSearching()));
-		Utilities.appendTextValueNode(groupNode, "LastTopVisibleEntry", formatKdbxUUIDValue(group.getLastTopVisibleEntry()));
+		Utilities.appendTextValueNode(groupNode, "EnableAutoType", formatNullableBooleanValue(group.getEnableAutoTypeSetting()));
+		Utilities.appendTextValueNode(groupNode, "EnableSearching", formatNullableBooleanValue(group.getEnableSearchingSetting()));
+		if (group.getLastTopVisibleEntry() != null) {
+			Utilities.appendTextValueNode(groupNode, "LastTopVisibleEntry", formatKdbxUUIDValue(group.getLastTopVisibleEntry()));
+		}
 
 		writeTimes(dataFormatVersion, groupNode, group.getTimes());
 
@@ -450,16 +636,35 @@ public class KdbxWriter implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Writes a "CustomData" node.
+	 *
+	 * @param dataFormatVersion data format version
+	 * @param baseNode parent node
+	 * @param customData the custom data items
+	 */
 	private static void writeCustomData(final Version dataFormatVersion, final Node baseNode, final List<KdbxCustomDataItem> customData) {
 		final Node customDataNode = Utilities.appendNode(baseNode, "CustomData");
 		for (final KdbxCustomDataItem customDataItem : customData) {
 			final Node customDataItemNode = Utilities.appendNode(customDataNode, "Item");
 			Utilities.appendTextValueNode(customDataItemNode, "Key", customDataItem.getKey());
 			Utilities.appendTextValueNode(customDataItemNode, "Value", customDataItem.getValue());
-			Utilities.appendTextValueNode(customDataItemNode, "LastModificationTime", formatDateTimeValue(dataFormatVersion, customDataItem.getLastModificationTime()));
+			if (customDataItem.getLastModificationTime() != null) {
+				Utilities.appendTextValueNode(customDataItemNode, "LastModificationTime", formatDateTimeValue(dataFormatVersion, customDataItem.getLastModificationTime()));
+			}
 		}
 	}
 
+	/**
+	 * Writes an "Entry" node including its history entries.
+	 * Items are protected, if their key is in keyNamesToEncrypt or they are marked as protected in the entry.
+	 *
+	 * @param innerEncryptionCipher inner stream cipher or null for no protection
+	 * @param keyNamesToEncrypt item keys, which are always protected
+	 * @param dataFormatVersion data format version
+	 * @param baseNode parent node
+	 * @param entry the entry
+	 */
 	private void writeEntryNode(final StreamCipher innerEncryptionCipher, final Set<String> keyNamesToEncrypt, final Version dataFormatVersion, final Node baseNode, final KdbxEntry entry) {
 		final Node entryNode = Utilities.appendNode(baseNode, "Entry");
 		Utilities.appendTextValueNode(entryNode, "UUID", formatKdbxUUIDValue(entry.getUuid()));
@@ -476,8 +681,8 @@ public class KdbxWriter implements AutoCloseable {
 		for (final Entry<String, Object> itemEntry : entry.getItems().entrySet()) {
 			final Node itemNode = Utilities.appendNode(entryNode, "String");
 			Utilities.appendTextValueNode(itemNode, "Key", itemEntry.getKey());
-			if (keyNamesToEncrypt.contains(itemEntry.getKey())) {
-				String value = (String) itemEntry.getValue();
+			if (keyNamesToEncrypt.contains(itemEntry.getKey()) || entry.isItemProtected(itemEntry.getKey())) {
+				String value = itemEntry.getValue() == null ? null : itemEntry.getValue().toString();
 				if (value != null && innerEncryptionCipher != null) {
 					final byte[] data = value.getBytes(StandardCharsets.UTF_8);
 					final byte[] output = new byte[data.length];
@@ -487,7 +692,7 @@ public class KdbxWriter implements AutoCloseable {
 				final Node valueNode = Utilities.appendTextValueNode(itemNode, "Value", value);
 				Utilities.appendAttribute((Element) valueNode, "Protected", "True");
 			} else {
-				Utilities.appendTextValueNode(itemNode, "Value", (String) itemEntry.getValue());
+				Utilities.appendTextValueNode(itemNode, "Value", itemEntry.getValue() == null ? null : itemEntry.getValue().toString());
 			}
 		}
 
@@ -524,6 +729,13 @@ public class KdbxWriter implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Writes the "DeletedObjects" node.
+	 *
+	 * @param dataFormatVersion data format version
+	 * @param baseNode parent node
+	 * @param deletedObjects deletion times by UUID
+	 */
 	private static void writeDeletedObjects(final Version dataFormatVersion, final Node baseNode, final Map<KdbxUUID, ZonedDateTime> deletedObjects) {
 		final Node deletedObjectsNode = Utilities.appendNode(baseNode, "DeletedObjects");
 		for (final Entry<KdbxUUID, ZonedDateTime> deletedObject : deletedObjects.entrySet()) {
@@ -533,6 +745,13 @@ public class KdbxWriter implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Writes a "Times" node.
+	 *
+	 * @param dataFormatVersion data format version
+	 * @param baseNode parent node
+	 * @param times the times
+	 */
 	private static void writeTimes(final Version dataFormatVersion, final Node baseNode, final KdbxTimes times) {
 		final Node timesNode = Utilities.appendNode(baseNode, "Times");
 		Utilities.appendTextValueNode(timesNode, "LastModificationTime", formatDateTimeValue(dataFormatVersion, times.getLastModificationTime()));
@@ -544,6 +763,14 @@ public class KdbxWriter implements AutoCloseable {
 		Utilities.appendTextValueNode(timesNode, "LocationChanged", formatDateTimeValue(dataFormatVersion, times.getLocationChanged()));
 	}
 
+	/**
+	 * Creates the inner stream cipher for protected values.
+	 *
+	 * @param innerEncryptionAlgorithm algorithm of the inner stream cipher
+	 * @param innerEncryptionKeyBytes key of the inner stream cipher as stored in the header
+	 * @return the initialized stream cipher or null for algorithm NONE
+	 * @throws Exception if the algorithm is not supported
+	 */
 	private static StreamCipher createInnerEncryptionCipher(final InnerEncryptionAlgorithm innerEncryptionAlgorithm, final byte[] innerEncryptionKeyBytes) throws Exception {
 		switch (innerEncryptionAlgorithm) {
 			case SALSA20:
@@ -581,11 +808,19 @@ public class KdbxWriter implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Formats a date time value: UTC ISO text with seconds precision in KDBX 3.x ("2024-01-31T12:34:56Z"), base64 encoded seconds since 0001-01-01 in KDBX 4.x.
+	 *
+	 * @param dataFormatVersion data format version
+	 * @param dateTimeValue the date time or null
+	 * @return the formatted value or an empty string for null
+	 */
 	private static String formatDateTimeValue(final Version dataFormatVersion, final ZonedDateTime dateTimeValue) {
 		if (dateTimeValue == null) {
 			return "";
 		} else if (dataFormatVersion.getMajorVersionNumber() < 4) {
-			return DateTimeFormatter.ISO_DATE_TIME.format(dateTimeValue);
+			// KeePass format: UTC with seconds precision, e.g. "2024-01-31T12:34:56Z"
+			return DateTimeFormatter.ISO_INSTANT.format(dateTimeValue.toInstant().truncatedTo(ChronoUnit.SECONDS));
 		} else {
 			final Duration duration = Duration.between(ZonedDateTime.of(1, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC")), dateTimeValue);
 			final long elapsedSeconds = duration.getSeconds();
@@ -593,20 +828,53 @@ public class KdbxWriter implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Formats an integer value.
+	 *
+	 * @param value the value
+	 * @return the decimal text
+	 */
 	private static String formatIntegerValue(final int value) {
 		return Integer.toString(value);
 	}
 
+	/**
+	 * Formats a boolean value.
+	 *
+	 * @param value the value
+	 * @return "True" or "False"
+	 */
 	private static String formatBooleanValue(final boolean value) {
 		return value ? "True" : "False";
 	}
 
+	/**
+	 * Formats a boolean value, which may be null (e.g. "inherit from parent group").
+	 *
+	 * @param value the value
+	 * @return "True", "False" or "null"
+	 */
+	private static String formatNullableBooleanValue(final Boolean value) {
+		return value == null ? "null" : formatBooleanValue(value);
+	}
+
+	/**
+	 * Formats a UUID value as base64 text.
+	 *
+	 * @param uuid the UUID
+	 * @return the base64 text
+	 */
 	private static String formatKdbxUUIDValue(final KdbxUUID uuid) {
 		return uuid.toBase64();
 	}
 
+	/**
+	 * Closes the output stream.
+	 *
+	 * @throws IOException if closing the stream fails
+	 */
 	@Override
-	public void close() throws Exception {
+	public void close() throws IOException {
 		if (outputStream != null) {
 			outputStream.close();
 		}

@@ -4,11 +4,26 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+/**
+ * InputStream, which optionally keeps a copy of all data read from the underlying stream (e.g. to get the raw header bytes while parsing them).
+ */
 public class CopyInputStream extends InputStream {
+	/**
+	 * The underlying stream.
+	 */
 	private InputStream baseInputStream;
 
+	/**
+	 * Copy of the read data, or null if copying is switched off.
+	 */
 	private ByteArrayOutputStream bufferStream = null;
 
+	/**
+	 * Creates the stream.
+	 *
+	 * @param inputStream the underlying stream
+	 * @throws IllegalArgumentException if the stream is null
+	 */
 	public CopyInputStream(final InputStream inputStream) {
 		if (inputStream == null) {
 			throw new IllegalArgumentException("Invalid empty inputStream parameter for CopyInputStream");
@@ -17,21 +32,39 @@ public class CopyInputStream extends InputStream {
 		}
 	}
 
+	/**
+	 * Switches copying of read data on or off. Switching it off discards the copied data, switching it on again keeps the data copied so far.
+	 *
+	 * @param copyOnRead true to copy read data
+	 */
 	public void setCopyOnRead(final boolean copyOnRead) {
-		if (copyOnRead && bufferStream == null) {
-			bufferStream = new ByteArrayOutputStream();
+		if (copyOnRead) {
+			if (bufferStream == null) {
+				bufferStream = new ByteArrayOutputStream();
+			}
 		} else {
 			bufferStream = null;
 		}
 	}
 
+	/**
+	 * Switches copying of read data on or off and returns this object for method chaining.
+	 *
+	 * @param newCopyOnRead true to copy read data
+	 * @return this object
+	 */
 	public CopyInputStream withCopyOnRead(final boolean newCopyOnRead) {
 		setCopyOnRead(newCopyOnRead);
 		return this;
 	}
 
+	/**
+	 * Returns the data copied since copying was switched on.
+	 *
+	 * @return the copied data or null if copying is switched off
+	 */
 	public byte[] getCopiedData() {
-		return bufferStream.toByteArray();
+		return bufferStream == null ? null : bufferStream.toByteArray();
 	}
 
 	@Override

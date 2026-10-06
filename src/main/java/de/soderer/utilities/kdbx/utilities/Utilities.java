@@ -3,6 +3,7 @@ package de.soderer.utilities.kdbx.utilities;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -12,7 +13,6 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -31,105 +31,51 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.helpers.DefaultHandler;
 
+/**
+ * Helper methods for strings, byte data, streams, XML and compression used by the KDBX library.
+ */
 public class Utilities {
-	private static Pattern HEXADECIMAL_PATTERN = Pattern.compile("\\p{XDigit}+");
+	/**
+	 * Pattern of hexadecimal text.
+	 */
+	private static final Pattern HEXADECIMAL_PATTERN = Pattern.compile("\\p{XDigit}*");
 
-	public static boolean isEmpty(final String value) {
-		return value == null || value.length() == 0;
+	/**
+	 * Utility class, not to be instantiated.
+	 */
+	private Utilities() {
+		throw new IllegalStateException("Utility class");
 	}
 
-	public static boolean isNotEmpty(final String value) {
-		return !isEmpty(value);
-	}
-
-	public static boolean isEmpty(final Collection<?> collection) {
-		return collection == null || collection.isEmpty();
-	}
-
-	public static boolean isNotEmpty(final Collection<?> collection) {
-		return !isEmpty(collection);
-	}
-
+	/**
+	 * Checks for a null, empty or whitespace only string.
+	 *
+	 * @param value the string
+	 * @return true for null, empty or whitespace only
+	 */
 	public static boolean isBlank(final String value) {
 		return value == null || value.length() == 0 || value.trim().length() == 0;
 	}
 
+	/**
+	 * Checks for a string with at least one non whitespace character.
+	 *
+	 * @param value the string
+	 * @return true for a string with non whitespace content
+	 */
 	public static boolean isNotBlank(final String value) {
 		return !isBlank(value);
 	}
 
-	public static boolean isEmpty(final char[] value) {
-		return value == null || value.length == 0;
-	}
-
-	public static boolean isNotEmpty(final char[] value) {
-		return !isEmpty(value);
-	}
-
-	public static boolean isBlank(final char[] value) {
-		if (value == null || value.length == 0) {
-			return true;
-		} else {
-			for (final char character : value) {
-				if (!Character.isWhitespace(character)) {
-					return false;
-				}
-			}
-			return true;
-		}
-	}
-
-	public static boolean isNotBlank(final char[] value) {
-		return !isBlank(value);
-	}
-
-	public static String repeat(final char valueChar, final int count) {
-		return repeat(Character.toString(valueChar), count, null);
-	}
-
-	public static String repeat(final String value, final int count) {
-		return repeat(value, count, null);
-	}
-
-	public static String repeat(final String value, final int count, final String separatorString) {
-		if (value == null) {
-			return null;
-		} else if (value.length() == 0 || count == 0) {
-			return "";
-		} else {
-			final StringBuilder returnValue = new StringBuilder();
-			for (int i = 0; i < count; i++) {
-				if (separatorString != null && returnValue.length() > 0) {
-					returnValue.append(separatorString);
-				}
-				returnValue.append(value);
-			}
-			return returnValue.toString();
-		}
-	}
-
-	public static String leftPad(final String value, final int minimumLength) {
-		try {
-			return String.format("%1$" + minimumLength + "s", value);
-		} catch (@SuppressWarnings("unused") final Exception e) {
-			return value;
-		}
-	}
-
-	public static String leftPad(final String value, final int size, final char padChar) {
-		if (value == null) {
-			return null;
-		} else {
-			final int padsize = size - value.length();
-			if (padsize <= 0) {
-				return value;
-			} else {
-				return repeat(padChar, padsize).concat(value);
-			}
-		}
-	}
-
+	/**
+	 * Reads all remaining data of a stream.
+	 *
+	 * @param inputStream the stream
+	 * @return the data or null for a null stream
+	 * @throws IOException if reading fails
+	 */
 	public static byte[] toByteArray(final InputStream inputStream) throws IOException {
 		if (inputStream == null) {
 			return null;
@@ -141,6 +87,14 @@ public class Utilities {
 		}
 	}
 
+	/**
+	 * Copies all remaining data of a stream into another stream.
+	 *
+	 * @param inputStream source stream
+	 * @param outputStream destination stream
+	 * @return number of copied bytes
+	 * @throws IOException if reading or writing fails
+	 */
 	public static long copy(final InputStream inputStream, final OutputStream outputStream) throws IOException {
 		final byte[] buffer = new byte[4096];
 		int lengthRead = -1;
@@ -153,19 +107,23 @@ public class Utilities {
 		return bytesCopied;
 	}
 
-	private static final Pattern BASE64_PATTERN = Pattern.compile("^@(?=(.{4})*$)[A-Za-z0-9+/]*={0,2}$");
-
-	public static boolean isBase64(final String s) {
-		if (Utilities.isNotBlank(s)) {
-			return BASE64_PATTERN.matcher(s).matches();
-		}
-		return false;
-	}
-
+	/**
+	 * Converts data to uppercase hexadecimal text with "_" between the bytes.
+	 *
+	 * @param data the data
+	 * @return the hexadecimal text or "&lt;empty&gt;" for null or empty data
+	 */
 	public static String toHexString(final byte[] data) {
 		return toHexString(data, "_");
 	}
 
+	/**
+	 * Converts hexadecimal text (optionally with prefix "0x") to data.
+	 *
+	 * @param value the hexadecimal text
+	 * @return the data or null for null text
+	 * @throws RuntimeException if the text contains non hexadecimal characters or has an odd length
+	 */
 	public static byte[] fromHexString(final String value) {
 		if (value == null) {
 			return null;
@@ -176,6 +134,8 @@ public class Utilities {
 			}
 			if (!HEXADECIMAL_PATTERN.matcher(decodeValue).matches()) {
 				throw new RuntimeException("String contains non hexadecimal character: " + value);
+			} else if (decodeValue.length() % 2 != 0) {
+				throw new RuntimeException("Hexadecimal string has odd number of characters: " + value);
 			}
 			final int length = decodeValue.length();
 			final byte[] data = new byte[length / 2];
@@ -186,6 +146,14 @@ public class Utilities {
 		}
 	}
 
+	/**
+	 * Converts hexadecimal text to data, optionally ignoring all non hexadecimal characters (e.g. separators and whitespace).
+	 *
+	 * @param value the hexadecimal text
+	 * @param ignoreNonHexCharacters true to remove all non hexadecimal characters before conversion
+	 * @return the data or null for null text
+	 * @throws RuntimeException if the text is no valid hexadecimal text
+	 */
 	public static byte[] fromHexString(final String value, final boolean ignoreNonHexCharacters) {
 		if (value == null) {
 			return null;
@@ -196,6 +164,13 @@ public class Utilities {
 		}
 	}
 
+	/**
+	 * Converts data to uppercase hexadecimal text.
+	 *
+	 * @param data the data
+	 * @param separator separator between the bytes
+	 * @return the hexadecimal text or "&lt;empty&gt;" for null or empty data
+	 */
 	public static String toHexString(final byte[] data, final String separator) {
 		if (data == null || data.length == 0) {
 			return "<empty>";
@@ -214,42 +189,67 @@ public class Utilities {
 		return buffer.toString();
 	}
 
-	public static String toByteString(final byte[] data, final String separator) {
-		if (data == null || data.length == 0) {
-			return "<empty>";
-		}
-		final StringBuilder buffer = new StringBuilder();
-		for (int i = 0; i < data.length; i++) {
-			buffer.append(data[i]);
-			if ((i + 1) < data.length) {
-				buffer.append(separator);
-			}
-		}
-		return buffer.toString();
-	}
-
+	/**
+	 * Reads a little endian 32 bit integer from a stream. Partial reads of the stream are handled.
+	 *
+	 * @param inputStream the stream
+	 * @return the value
+	 * @throws IOException if reading fails
+	 * @throws Exception if the stream ends before 4 bytes are read
+	 */
 	public static int readLittleEndianIntFromStream(final InputStream inputStream) throws IOException, Exception {
-		final byte[] byteBuffer = new byte[4];
-		final int readBytes = inputStream.read(byteBuffer);
-		if (readBytes == -1) {
+		// readNBytes loops until all bytes are read, because a single read() call may legally return less data (e.g. GZIPInputStream, CipherInputStream, network streams)
+		final byte[] byteBuffer = inputStream.readNBytes(4);
+		if (byteBuffer.length == 0) {
 			throw new Exception("Cannot read int from stream: End of stream");
-		} else if (readBytes != byteBuffer.length) {
+		} else if (byteBuffer.length != 4) {
 			throw new Exception("Cannot read int from stream: Not enough data left");
 		}
 		return ByteBuffer.wrap(byteBuffer).order(ByteOrder.LITTLE_ENDIAN).getInt();
 	}
 
+	/**
+	 * Reads a little endian 16 bit integer from a stream. Partial reads of the stream are handled.
+	 *
+	 * @param inputStream the stream
+	 * @return the value
+	 * @throws IOException if reading fails
+	 * @throws Exception if the stream ends before 2 bytes are read
+	 */
 	public static short readLittleEndianShortFromStream(final InputStream inputStream) throws IOException, Exception {
-		final byte[] byteBuffer = new byte[2];
-		final int readBytes = inputStream.read(byteBuffer);
-		if (readBytes == -1) {
-			throw new Exception("Cannot read int from stream: End of stream");
-		} else if (readBytes != byteBuffer.length) {
-			throw new Exception("Cannot read int from stream: Not enough data left");
+		final byte[] byteBuffer = inputStream.readNBytes(2);
+		if (byteBuffer.length == 0) {
+			throw new Exception("Cannot read short from stream: End of stream");
+		} else if (byteBuffer.length != 2) {
+			throw new Exception("Cannot read short from stream: Not enough data left");
 		}
 		return ByteBuffer.wrap(byteBuffer).order(ByteOrder.LITTLE_ENDIAN).getShort();
 	}
 
+	/**
+	 * Reads an exact number of bytes from a stream. Partial reads of the stream are handled.
+	 *
+	 * @param inputStream the stream
+	 * @param length number of bytes to read
+	 * @param description description of the data for the error message
+	 * @return the data
+	 * @throws IOException if reading fails or the stream ends prematurely
+	 */
+	public static byte[] readFully(final InputStream inputStream, final int length, final String description) throws IOException {
+		final byte[] data = inputStream.readNBytes(length);
+		if (data.length != length) {
+			throw new EOFException("Cannot read " + description + ": premature end of stream after " + data.length + " of " + length + " bytes");
+		}
+		return data;
+	}
+
+	/**
+	 * Reads a signed little endian integer of 1, 2, 4 or 8 bytes.
+	 *
+	 * @param data the data
+	 * @return the value
+	 * @throws RuntimeException for other data lengths
+	 */
 	public static long readLittleEndianValueFromByteArray(final byte[] data) {
 		switch (data.length) {
 			case 1:
@@ -265,6 +265,12 @@ public class Utilities {
 		}
 	}
 
+	/**
+	 * Encodes characters as UTF-8 without creating an intermediate String. The temporary encoding buffer is cleared.
+	 *
+	 * @param chars the characters
+	 * @return the UTF-8 data
+	 */
 	public static byte[] toBytes(final char[] chars) {
 		final CharBuffer charBuffer = CharBuffer.wrap(chars);
 		final ByteBuffer byteBuffer = Charset.forName("UTF-8").encode(charBuffer);
@@ -274,7 +280,13 @@ public class Utilities {
 	}
 
 	/**
-	 * AES Key Derivation
+	 * AES-KDF: encrypts a key repeatedly with AES in ECB mode.
+	 *
+	 * @param salt AES key (transform seed)
+	 * @param rounds number of encryption rounds
+	 * @param originalKey the key to transform (multiple of 16 bytes)
+	 * @return the transformed key
+	 * @throws RuntimeException if encryption fails
 	 */
 	public final static byte[] deriveKeyByAES(final byte[] salt, final long rounds, final byte[] originalKey) {
 		byte[] result = new byte[originalKey.length];
@@ -291,6 +303,13 @@ public class Utilities {
 		return result;
 	}
 
+	/**
+	 * Concatenates two byte arrays.
+	 *
+	 * @param array1 first array
+	 * @param array2 second array
+	 * @return new array with the content of both arrays
+	 */
 	public static byte[] concatArrays(final byte[] array1, final byte[] array2) {
 		final byte[] result = new byte[array1.length + array2.length];
 		int writeIndex = 0;
@@ -303,18 +322,23 @@ public class Utilities {
 		return result;
 	}
 
-	public static short readShortFromLittleEndianBytes(final byte[] dataBytes) {
-		if (dataBytes == null || dataBytes.length != 2) {
-			throw new RuntimeException("Invalid data bytes for short value: 2 bytes expected");
-		} else {
-			return ByteBuffer.wrap(dataBytes).order(ByteOrder.LITTLE_ENDIAN).getShort();
-		}
-	}
-
+	/**
+	 * Returns the little endian bytes of a 16 bit integer.
+	 *
+	 * @param value the value
+	 * @return 2 bytes
+	 */
 	public static byte[] getLittleEndianBytes(final short value) {
 		return ByteBuffer.allocate(2).order(ByteOrder.LITTLE_ENDIAN).putShort(value).array();
 	}
 
+	/**
+	 * Reads a little endian 32 bit integer.
+	 *
+	 * @param dataBytes exactly 4 bytes
+	 * @return the value
+	 * @throws RuntimeException for invalid data
+	 */
 	public static int readIntFromLittleEndianBytes(final byte[] dataBytes) {
 		if (dataBytes == null || dataBytes.length != 4) {
 			throw new RuntimeException("Invalid data bytes for int value: 4 bytes expected");
@@ -323,10 +347,23 @@ public class Utilities {
 		}
 	}
 
+	/**
+	 * Returns the little endian bytes of a 32 bit integer.
+	 *
+	 * @param value the value
+	 * @return 4 bytes
+	 */
 	public static byte[] getLittleEndianBytes(final int value) {
 		return ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(value).array();
 	}
 
+	/**
+	 * Reads a little endian 64 bit integer.
+	 *
+	 * @param dataBytes exactly 8 bytes
+	 * @return the value
+	 * @throws RuntimeException for invalid data
+	 */
 	public static long readLongFromLittleEndianBytes(final byte[] dataBytes) {
 		if (dataBytes == null || dataBytes.length != 8) {
 			throw new RuntimeException("Invalid data bytes for long value: 8 bytes expected");
@@ -335,10 +372,22 @@ public class Utilities {
 		}
 	}
 
+	/**
+	 * Returns the little endian bytes of a 64 bit integer.
+	 *
+	 * @param value the value
+	 * @return 8 bytes
+	 */
 	public static byte[] getLittleEndianBytes(final long value) {
 		return ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN).putLong(value).array();
 	}
 
+	/**
+	 * Checks whether data starts with an XML declaration ("&lt;?xml ").
+	 *
+	 * @param data the data
+	 * @return true for data starting with an XML declaration
+	 */
 	public static boolean isXmlDocument(final byte[] data) {
 		if (data == null || data.length < 6) {
 			return false;
@@ -347,22 +396,30 @@ public class Utilities {
 		}
 	}
 
-	public static Document parseXmlFile(final byte[] xmlData) {
+	/**
+	 * Parses XML data with a parser hardened against XXE attacks (no DOCTYPE, no external entities).
+	 *
+	 * @param xmlData the XML data
+	 * @return the document
+	 * @throws Exception if the data is no well-formed XML
+	 */
+	public static Document parseXmlFile(final byte[] xmlData) throws Exception {
 		try (BufferedInputStream inputStream = new BufferedInputStream(new ByteArrayInputStream(xmlData))) {
 			final DocumentBuilderFactory documentBuilderFactory = createHardenedDocumentBuilderFactory();
 			final DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-			final Document document = documentBuilder.parse(inputStream);
-			return document;
-		} catch (@SuppressWarnings("unused") final Exception e) {
-			return null;
+			// Suppress the default error output of the parser on System.err, fatal errors are reported via the thrown exception
+			documentBuilder.setErrorHandler(new DefaultHandler());
+			return documentBuilder.parse(inputStream);
+		} catch (final Exception e) {
+			throw new Exception("Cannot parse XML data: " + e.getMessage(), e);
 		}
 	}
 
 	/**
-	 * Creates a DocumentBuilderFactory hardened against XML External Entity (XXE) attacks:
-	 * disables DTDs entirely, and as defense in depth also disables external general/parameter
-	 * entities and XInclude processing. This is applied to both key file XML parsing and KDBX
-	 * payload XML parsing, since both may process data that did not originate from a trusted source.
+	 * Creates a DocumentBuilderFactory, which rejects DOCTYPE declarations and does not resolve external entities.
+	 *
+	 * @return the factory
+	 * @throws ParserConfigurationException if a feature is not supported
 	 */
 	private static DocumentBuilderFactory createHardenedDocumentBuilderFactory() throws ParserConfigurationException {
 		final DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
@@ -375,6 +432,12 @@ public class Utilities {
 		return documentBuilderFactory;
 	}
 
+	/**
+	 * Returns the value of a node or the value of its first descendant with a value.
+	 *
+	 * @param pNode the node
+	 * @return the value or null
+	 */
 	public static String getNodeValue(final Node pNode) {
 		if (pNode.getNodeValue() != null) {
 			return pNode.getNodeValue();
@@ -385,6 +448,13 @@ public class Utilities {
 		}
 	}
 
+	/**
+	 * Returns the value of an attribute, searched by name case insensitive.
+	 *
+	 * @param pNode the node
+	 * @param pAttributeName name of the attribute
+	 * @return the value or null if the attribute does not exist
+	 */
 	public static String getAttributeValue(final Node pNode, final String pAttributeName) {
 		String returnString = null;
 
@@ -401,6 +471,12 @@ public class Utilities {
 		return returnString;
 	}
 
+	/**
+	 * Returns the child nodes (except text nodes) by their names. For several child nodes with the same name only the last one is returned.
+	 *
+	 * @param dataNode the parent node
+	 * @return the child nodes by name
+	 */
 	public static Map<String, Node> getChildNodesMap(final Node dataNode) {
 		final Map<String, Node> childNodes = new LinkedHashMap<>();
 		final NodeList childNodesList = dataNode.getChildNodes();
@@ -414,6 +490,12 @@ public class Utilities {
 		return childNodes;
 	}
 
+	/**
+	 * Creates an empty XML document.
+	 *
+	 * @return the document
+	 * @throws ParserConfigurationException if no parser is available
+	 */
 	public static Document createNewDocument() throws ParserConfigurationException {
 		final DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
 		final DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
@@ -421,18 +503,40 @@ public class Utilities {
 		return document;
 	}
 
+	/**
+	 * Appends the root element to a document.
+	 *
+	 * @param document the document
+	 * @param tagName name of the element
+	 * @return the new element
+	 */
 	public static Element appendNode(final Document document, final String tagName) {
 		final Element newNode = document.createElement(tagName);
 		document.appendChild(newNode);
 		return newNode;
 	}
 
+	/**
+	 * Appends a child element.
+	 *
+	 * @param baseNode the parent node
+	 * @param tagName name of the element
+	 * @return the new element
+	 */
 	public static Element appendNode(final Node baseNode, final String tagName) {
 		final Element newNode = baseNode.getOwnerDocument().createElement(tagName);
 		baseNode.appendChild(newNode);
 		return newNode;
 	}
 
+	/**
+	 * Appends a child element with text content.
+	 *
+	 * @param baseNode the parent node
+	 * @param tagName name of the element
+	 * @param tagValue text content or null for an empty element
+	 * @return the new element
+	 */
 	public static Node appendTextValueNode(final Node baseNode, final String tagName, final String tagValue) {
 		final Node newNode = appendNode(baseNode, tagName);
 		if (tagValue != null) {
@@ -441,6 +545,13 @@ public class Utilities {
 		return newNode;
 	}
 
+	/**
+	 * Sets an attribute of an element.
+	 *
+	 * @param baseNode the element
+	 * @param attributeName name of the attribute
+	 * @param attributeValue value of the attribute or null for an empty value
+	 */
 	public static void appendAttribute(final Element baseNode, final String attributeName, final String attributeValue) {
 		final Attr typeAttribute = baseNode.getOwnerDocument().createAttribute(attributeName);
 		if (attributeValue != null) {
@@ -449,6 +560,13 @@ public class Utilities {
 		baseNode.setAttributeNode(typeAttribute);
 	}
 
+	/**
+	 * Compresses data with GZIP.
+	 *
+	 * @param data the data
+	 * @return the compressed data
+	 * @throws Exception if compression fails
+	 */
 	public static byte[] gzip(final byte[] data) throws Exception {
 		final ByteArrayOutputStream bufferStream = new ByteArrayOutputStream();
 		try (final GZIPOutputStream gzipOut = new GZIPOutputStream(bufferStream)) {
@@ -459,6 +577,13 @@ public class Utilities {
 		return bufferStream.toByteArray();
 	}
 
+	/**
+	 * Decompresses GZIP data.
+	 *
+	 * @param compressedData the compressed data
+	 * @return the uncompressed data
+	 * @throws Exception if the data is no valid GZIP data
+	 */
 	public static byte[] gunzip(final byte[] compressedData) throws Exception {
 		try (final GZIPInputStream gzipIn = new GZIPInputStream(new ByteArrayInputStream(compressedData))) {
 			return Utilities.toByteArray(gzipIn);

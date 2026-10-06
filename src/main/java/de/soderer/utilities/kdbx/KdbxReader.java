@@ -3,10 +3,10 @@ package de.soderer.utilities.kdbx;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.security.Security;
 import java.security.spec.AlgorithmParameterSpec;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -23,6 +23,7 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
 import javax.crypto.Mac;
+import javax.crypto.spec.ChaCha20ParameterSpec;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -31,7 +32,6 @@ import org.bouncycastle.crypto.engines.ChaCha7539Engine;
 import org.bouncycastle.crypto.engines.Salsa20Engine;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
@@ -40,7 +40,6 @@ import org.w3c.dom.NodeList;
 import de.soderer.utilities.kdbx.data.KdbxBinary;
 import de.soderer.utilities.kdbx.data.KdbxConstants.InnerEncryptionAlgorithm;
 import de.soderer.utilities.kdbx.data.KdbxConstants.OuterEncryptionAlgorithm;
-import de.soderer.utilities.kdbx.data.KdbxConstants.PayloadBlockType;
 import de.soderer.utilities.kdbx.data.KdbxCustomDataItem;
 import de.soderer.utilities.kdbx.data.KdbxEntry;
 import de.soderer.utilities.kdbx.data.KdbxEntryBinary;
@@ -57,34 +56,93 @@ import de.soderer.utilities.kdbx.utilities.TypeHashLengthValueStructure;
 import de.soderer.utilities.kdbx.utilities.Utilities;
 import de.soderer.utilities.kdbx.utilities.Version;
 
+/**
+ * Reader for KeePass database files in the KDBX format (data format versions 3.x and 4.x).
+ * <p>
+ * Example:
+ * <pre>
+ * try (KdbxReader reader = new KdbxReader(new FileInputStream(file))) {
+ * 	KdbxDatabase database = reader.readKdbxDatabase(password);
+ * }
+ * </pre>
+ * <p>
+ * The reader closes the given input stream after reading or when it is closed itself.
+ * Only one database can be read per reader instance.
+ */
 public class KdbxReader implements AutoCloseable {
+	/**
+	 * Strict mode, which rejects unknown XML nodes and missing header hashes instead of ignoring them.
+	 */
 	private boolean strictMode = false;
 
+	/**
+	 * Stream of the KDBX file data.
+	 */
 	private final InputStream inputStream;
 
+	/**
+	 * Inner stream cipher for protected values, which must be applied to them in the order of their appearance in the XML document.
+	 */
 	private StreamCipher innerEncryptionCipher;
 
+	/**
+	 * Creates a reader for the given KDBX file data.
+	 *
+	 * @param inputStream stream of the KDBX file data, which will be closed by this reader
+	 */
 	public KdbxReader(final InputStream inputStream) {
 		this.inputStream = inputStream;
 	}
 
+	/**
+	 * Sets the strict mode, which rejects unknown XML nodes and missing header hashes instead of ignoring them.
+	 *
+	 * @param strictMode the strict mode, which rejects unknown XML nodes and missing header hashes instead of ignoring them
+	 */
 	public void setStrictMode(final boolean strictMode) {
 		this.strictMode = strictMode;
 	}
 
+	/**
+	 * Sets the strict mode, which rejects unknown XML nodes and missing header hashes instead of ignoring them and returns this object for method chaining.
+	 *
+	 * @param newStrictMode the strict mode, which rejects unknown XML nodes and missing header hashes instead of ignoring them
+	 * @return this object
+	 */
 	public KdbxReader withStrictMode(final boolean newStrictMode) {
 		setStrictMode(newStrictMode);
 		return this;
 	}
 
+	/**
+	 * Returns the strict mode, which rejects unknown XML nodes and missing header hashes instead of ignoring them.
+	 *
+	 * @return the strict mode, which rejects unknown XML nodes and missing header hashes instead of ignoring them
+	 */
 	public boolean isStrictMode() {
 		return strictMode;
 	}
 
+	/**
+	 * Reads the database, which is protected only by a password.
+	 *
+	 * @param password the master password of the database
+	 * @return the decrypted database
+	 * @throws Exception if the data is not a supported KDBX file, the password is wrong or the data is corrupted
+	 */
 	public KdbxDatabase readKdbxDatabase(final char[] password) throws Exception {
 		return readKdbxDatabase(new KdbxCredentials(password));
 	}
 
+	/**
+	 * Reads the database with the given credentials.
+	 * <p>
+	 * The credentials are remembered as salted fingerprint in the database, so that a later write with other credentials updates the "MasterKeyChanged" time.
+	 *
+	 * @param credentials the credentials (password and/or key file) of the database
+	 * @return the decrypted database
+	 * @throws Exception if the data is not a supported KDBX file, the credentials are wrong or the data is corrupted
+	 */
 	public KdbxDatabase readKdbxDatabase(final KdbxCredentials credentials) throws Exception {
 		try (BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream)) {
 			bufferedInputStream.mark(1024);
@@ -92,23 +150,41 @@ public class KdbxReader implements AutoCloseable {
 			bufferedInputStream.reset();
 
 			final KdbxDatabase database = new KdbxDatabase();
-			if (dataFormatVersion.getMajorVersionNumber() == 3) {
-				return readDataFormat3(credentials, bufferedInputStream, dataFormatVersion, database);
-			} else if (dataFormatVersion.getMajorVersionNumber() == 4) {
-				return readDataFormat4(credentials, bufferedInputStream, dataFormatVersion, database);
-			} else {
-				throw new Exception("Major kdbx file data format version " + dataFormatVersion.getMajorVersionNumber() + " is not supported");
+			final byte[] compositeKeyHash = credentials.createCompositeKeyHash();
+			try {
+				if (dataFormatVersion.getMajorVersionNumber() == 3) {
+					readDataFormat3(compositeKeyHash, bufferedInputStream, dataFormatVersion, database);
+				} else if (dataFormatVersion.getMajorVersionNumber() == 4) {
+					readDataFormat4(compositeKeyHash, bufferedInputStream, dataFormatVersion, database);
+				} else {
+					throw new Exception("Major kdbx file data format version " + dataFormatVersion.getMajorVersionNumber() + " is not supported");
+				}
+				// Remember the credentials (as salted fingerprint only), so that the writer can detect a change of the master key
+				database.rememberCredentials(compositeKeyHash);
+				return database;
+			} finally {
+				Arrays.fill(compositeKeyHash, (byte) 0);
 			}
 		}
 	}
 
-	private KdbxDatabase readDataFormat3(final KdbxCredentials credentials, final InputStream dataInputStream, final Version dataFormatVersion, final KdbxDatabase database) throws Exception {
+	/**
+	 * Reads the encrypted data of a KDBX 3.x file.
+	 *
+	 * @param compositeKeyHash hash of the composite key of the credentials
+	 * @param dataInputStream stream positioned at the start of the file
+	 * @param dataFormatVersion data format version of the file
+	 * @param database database to fill with the read data
+	 * @return the given database
+	 * @throws Exception if decryption or parsing fails or the data is corrupted
+	 */
+	private KdbxDatabase readDataFormat3(final byte[] compositeKeyHash, final InputStream dataInputStream, final Version dataFormatVersion, final KdbxDatabase database) throws Exception {
 		final Document document;
 		final List<KdbxBinary> binaryAttachments = new ArrayList<>();
 		database.setBinaryAttachments(binaryAttachments);
 		final KdbxHeaderFormat3 headerFormat3 = KdbxHeaderFormat3.read(dataInputStream);
 		database.setHeaderFormat(headerFormat3);
-		final byte[] decryptionKey = headerFormat3.getEncryptionKey(credentials.createCompositeKeyHash());
+		final byte[] decryptionKey = headerFormat3.getEncryptionKey(compositeKeyHash);
 
 		final byte[] encryptedData = Utilities.toByteArray(dataInputStream);
 		byte[] decryptedData;
@@ -140,14 +216,21 @@ public class KdbxReader implements AutoCloseable {
 			throw new Exception("KDBX database decryption failed. Maybe the given credentials are wrong.");
 		}
 
+		// KDBX 3 HashedBlockStream: Blocks with consecutive block index, hash and data. A block with data length 0 terminates the payload.
 		final ByteArrayOutputStream payloadData = new ByteArrayOutputStream();
-		TypeHashLengthValueStructure nextTypeHashLengthValueStructure;
-		do {
-			nextTypeHashLengthValueStructure = TypeHashLengthValueStructure.read(decryptedPayloadStream, "SHA-256");
-			if (nextTypeHashLengthValueStructure.getTypeId() == PayloadBlockType.PAYLOAD.getId()) {
-				payloadData.write(nextTypeHashLengthValueStructure.getData());
+		long expectedBlockIndex = 0;
+		while (true) {
+			final TypeHashLengthValueStructure nextBlock = TypeHashLengthValueStructure.read(decryptedPayloadStream, "SHA-256");
+			final long blockIndex = nextBlock.getTypeId() & 0xFFFFFFFFL;
+			if (blockIndex != expectedBlockIndex) {
+				throw new Exception("Invalid payload block index " + blockIndex + ", expected " + expectedBlockIndex);
+			} else if (nextBlock.getData().length == 0) {
+				break;
+			} else {
+				payloadData.write(nextBlock.getData());
+				expectedBlockIndex++;
 			}
-		} while (nextTypeHashLengthValueStructure.getTypeId() != PayloadBlockType.END_OF_PAYLOAD.getId());
+		}
 
 		innerEncryptionCipher = createInnerEncryptionCipher(headerFormat3.getInnerEncryptionAlgorithm(), headerFormat3.getInnerEncryptionKeyBytes());
 
@@ -180,47 +263,46 @@ public class KdbxReader implements AutoCloseable {
 			}
 		}
 
-		// Check header hash by given value in decrypted kdbx xml meta data
-		final byte[] actualSha256 = MessageDigest.getInstance("SHA-256").digest(headerFormat3.getHeaderBytes());
-		if (!Arrays.equals(actualSha256, Base64.getDecoder().decode(database.getMeta().getHeaderHash()))) {
-			throw new Exception("Outer header data corrupted, SHA-256 hashes do not match");
+		// Check header hash by given value in decrypted kdbx xml meta data. Older KDBX 3 files do not contain this value.
+		final String headerHash = database.getMeta().getHeaderHash();
+		if (Utilities.isNotBlank(headerHash)) {
+			final byte[] actualSha256 = MessageDigest.getInstance("SHA-256").digest(headerFormat3.getHeaderBytes());
+			if (!MessageDigest.isEqual(actualSha256, Base64.getDecoder().decode(headerHash.trim()))) {
+				throw new Exception("Outer header data corrupted, SHA-256 hashes do not match");
+			}
+		} else if (strictMode) {
+			throw new Exception("Missing header hash in meta data");
 		}
 
 		database.getHeaderFormat().resetCryptoKeys();
 
-		for (final KdbxEntry entry : database.getAllEntries()) {
-			for (final KdbxEntryBinary binary : entry.getBinaries()) {
-				if (binary.getRefId() != null) {
-					final KdbxBinary databaseBinary = database.getBinaryAttachments().get(binary.getRefId());
-					if (databaseBinary != null) {
-						if (databaseBinary.isCompressed()) {
-							binary.setCompressedData(databaseBinary.getData());
-						} else {
-							binary.setCompressedData(Utilities.gzip(databaseBinary.getData()));
-						}
-					} else {
-						throw new Exception("Cannot find referenced binary id: " + binary.getRefId());
-					}
-				}
-			}
-		}
+		resolveBinaryReferences(database);
 
 		return database;
 	}
 
-	private KdbxDatabase readDataFormat4(final KdbxCredentials credentials, final InputStream dataInputStream, final Version dataFormatVersion, final KdbxDatabase database) throws Exception {
+	/**
+	 * Reads the encrypted data of a KDBX 4.x file.
+	 *
+	 * @param compositeKeyHash hash of the composite key of the credentials
+	 * @param dataInputStream stream positioned at the start of the file
+	 * @param dataFormatVersion data format version of the file
+	 * @param database database to fill with the read data
+	 * @return the given database
+	 * @throws Exception if decryption or parsing fails or the data is corrupted
+	 */
+	private KdbxDatabase readDataFormat4(final byte[] compositeKeyHash, final InputStream dataInputStream, final Version dataFormatVersion, final KdbxDatabase database) throws Exception {
 		final Document document;
 		final KdbxHeaderFormat4 headerFormat4 = KdbxHeaderFormat4.read(dataInputStream);
 		database.setHeaderFormat(headerFormat4);
-		final byte[] decryptionKey = headerFormat4.getEncryptionKey(credentials.createCompositeKeyHash());
+		final byte[] decryptionKey = headerFormat4.getEncryptionKey(compositeKeyHash);
 
 		// SHA-256 Hash verification of headerBytes
 		final byte[] actualSha256 = MessageDigest.getInstance("SHA-256").digest(headerFormat4.getHeaderBytes());
-		final byte[] expectedSha256 = new byte[32];
-		final int readBytesExpectedSha256 = dataInputStream.read(expectedSha256);
-		if (readBytesExpectedSha256 != expectedSha256.length) {
+		final byte[] expectedSha256 = dataInputStream.readNBytes(32);
+		if (expectedSha256.length != 32) {
 			throw new IllegalStateException("Cannot read header SHA-256 hash bytes");
-		} else if (!Arrays.equals(actualSha256, expectedSha256)) {
+		} else if (!MessageDigest.isEqual(actualSha256, expectedSha256)) {
 			throw new Exception("Outer header data corrupted, SHA-256 hashes do not match");
 		}
 
@@ -233,9 +315,8 @@ public class KdbxReader implements AutoCloseable {
 		final byte[] hmacKey = digest.digest(new byte[] { 0x01 });
 
 		// HMAC-SHA-256 verification of headerBytes
-		final byte[] expectedHeaderHMAC = new byte[32];
-		final int readBytesExpectedHeaderHMAC = dataInputStream.read(expectedHeaderHMAC);
-		if (readBytesExpectedHeaderHMAC != expectedHeaderHMAC.length) {
+		final byte[] expectedHeaderHMAC = dataInputStream.readNBytes(32);
+		if (expectedHeaderHMAC.length != 32) {
 			throw new IllegalStateException("Cannot read HMAC code bytes");
 		}
 		final byte[] indexBytes = Utilities.getLittleEndianBytes(0xFFFFFFFF_FFFFFFFFL);
@@ -264,10 +345,10 @@ public class KdbxReader implements AutoCloseable {
 					paramSpec = new IvParameterSpec(headerFormat4.getEncryptionIV());
 					break;
 				case CHACHA20:
-					Security.addProvider(new BouncyCastleProvider());
+					// ChaCha20 (RFC 7539) with 96 bit nonce and initial block counter 0, provided by the JDK since Java 11
 					cipher = Cipher.getInstance("ChaCha20");
 					secretKeySpec = new SecretKeySpec(finalKey, "ChaCha20");
-					paramSpec = new IvParameterSpec(headerFormat4.getEncryptionIV());
+					paramSpec = new ChaCha20ParameterSpec(headerFormat4.getEncryptionIV(), 0);
 					break;
 				case TWOFISH:
 					throw new IllegalArgumentException("Cipher " + headerFormat4.getOuterEncryptionAlgorithm() + " is not implemented yet");
@@ -283,6 +364,12 @@ public class KdbxReader implements AutoCloseable {
 
 				final byte[] decryptedXmlPayloadData = Utilities.toByteArray(cipherInputStream);
 				document = Utilities.parseXmlFile(decryptedXmlPayloadData);
+			}
+
+			// Read the remaining HMAC blocks, so that all of them are verified, including the terminating block, which detects truncated data
+			final byte[] drainBuffer = new byte[4096];
+			while (hmacInputStream.read(drainBuffer) != -1) {
+				// skip trailing data
 			}
 		}
 
@@ -310,26 +397,19 @@ public class KdbxReader implements AutoCloseable {
 
 		database.getHeaderFormat().resetCryptoKeys();
 
-		for (final KdbxEntry entry : database.getAllEntries()) {
-			for (final KdbxEntryBinary binary : entry.getBinaries()) {
-				if (binary.getRefId() != null) {
-					final KdbxBinary databaseBinary = database.getBinaryAttachments().get(binary.getRefId());
-					if (databaseBinary != null) {
-						if (databaseBinary.isCompressed()) {
-							binary.setCompressedData(databaseBinary.getData());
-						} else {
-							binary.setCompressedData(Utilities.gzip(databaseBinary.getData()));
-						}
-					} else {
-						throw new Exception("Cannot find referenced binary id: " + binary.getRefId());
-					}
-				}
-			}
-		}
+		resolveBinaryReferences(database);
 
 		return database;
 	}
 
+	/**
+	 * Creates the inner stream cipher for protected values.
+	 *
+	 * @param innerEncryptionAlgorithm algorithm of the inner stream cipher
+	 * @param innerEncryptionKeyBytes key of the inner stream cipher as stored in the header
+	 * @return the initialized stream cipher or null for algorithm NONE
+	 * @throws Exception if the algorithm is not supported
+	 */
 	private StreamCipher createInnerEncryptionCipher(final InnerEncryptionAlgorithm innerEncryptionAlgorithm, final byte[] innerEncryptionKeyBytes) throws Exception {
 		switch (innerEncryptionAlgorithm) {
 			case SALSA20:
@@ -367,6 +447,15 @@ public class KdbxReader implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Reads the "Meta" node of the XML document.
+	 *
+	 * @param dataFormatVersion data format version of the file
+	 * @param metaNode the "Meta" node
+	 * @param binaryAttachments list to add the binaries of the meta data (KDBX 3.x only), or null if not applicable
+	 * @return the meta data
+	 * @throws Exception if the data is invalid or unknown in strict mode
+	 */
 	private KdbxMeta readKdbxMetaData(final Version dataFormatVersion, final Node metaNode, final List<KdbxBinary> binaryAttachments) throws Exception {
 		final KdbxMeta kdbxMeta = new KdbxMeta();
 		final NodeList childNodes = metaNode.getChildNodes();
@@ -422,7 +511,11 @@ public class KdbxReader implements AutoCloseable {
 				} else if ("LastTopVisibleGroup".equals(childNode.getNodeName())) {
 					kdbxMeta.setLastTopVisibleGroup(parseUuidValue(childNode));
 				} else if ("Binaries".equals(childNode.getNodeName())) {
-					binaryAttachments.addAll(parseBinariesData(childNode));
+					if (binaryAttachments != null) {
+						binaryAttachments.addAll(parseBinariesData(childNode));
+					} else if (strictMode) {
+						throw new Exception("Unexpected meta binaries in data format version " + dataFormatVersion);
+					}
 				} else if ("MemoryProtection".equals(childNode.getNodeName())) {
 					kdbxMeta.setMemoryProtection(parseMemoryProtection(childNode));
 				} else if ("CustomData".equals(childNode.getNodeName())) {
@@ -439,6 +532,13 @@ public class KdbxReader implements AutoCloseable {
 		return kdbxMeta;
 	}
 
+	/**
+	 * Reads the "MemoryProtection" node.
+	 *
+	 * @param memoryProtectionNode the "MemoryProtection" node
+	 * @return the memory protection settings
+	 * @throws Exception if the data is invalid or unknown in strict mode
+	 */
 	private KdbxMemoryProtection parseMemoryProtection(final Node memoryProtectionNode) throws Exception {
 		final KdbxMemoryProtection memoryProtection = new KdbxMemoryProtection();
 		final NodeList childNodes = memoryProtectionNode.getChildNodes();
@@ -465,6 +565,14 @@ public class KdbxReader implements AutoCloseable {
 		return memoryProtection;
 	}
 
+	/**
+	 * Reads a "CustomData" node.
+	 *
+	 * @param dataFormatVersion data format version of the file
+	 * @param customDataNode the "CustomData" node
+	 * @return the custom data items
+	 * @throws Exception if the data is invalid or unknown in strict mode
+	 */
 	private List<KdbxCustomDataItem> parseCustomData(final Version dataFormatVersion, final Node customDataNode)
 			throws Exception {
 		final List<KdbxCustomDataItem> customDataItems = new ArrayList<>();
@@ -484,6 +592,14 @@ public class KdbxReader implements AutoCloseable {
 		return customDataItems;
 	}
 
+	/**
+	 * Reads an "Item" node of custom data.
+	 *
+	 * @param dataFormatVersion data format version of the file
+	 * @param customDataItemNode the "Item" node
+	 * @return the custom data item
+	 * @throws Exception if the data is invalid or unknown in strict mode
+	 */
 	private KdbxCustomDataItem parseCustomDataItem(final Version dataFormatVersion, final Node customDataItemNode)
 			throws Exception {
 		final KdbxCustomDataItem customDataItem = new KdbxCustomDataItem();
@@ -507,6 +623,13 @@ public class KdbxReader implements AutoCloseable {
 		return customDataItem;
 	}
 
+	/**
+	 * Reads the "Binaries" node of the meta data (KDBX 3.x).
+	 *
+	 * @param binaryNode the "Binaries" node
+	 * @return the binaries
+	 * @throws Exception if the data is invalid or unknown in strict mode
+	 */
 	private List<KdbxBinary> parseBinariesData(final Node binaryNode) throws Exception {
 		final List<KdbxBinary> binaryItems = new ArrayList<>();
 		final NodeList binaryNodes = binaryNode.getChildNodes();
@@ -514,10 +637,15 @@ public class KdbxReader implements AutoCloseable {
 			final Node binaryChildNode = binaryNodes.item(i);
 			if (binaryChildNode.getNodeType() != Node.TEXT_NODE) {
 				if ("Binary".equals(binaryChildNode.getNodeName())) {
-					final int id = Integer.parseInt(Utilities.getAttributeValue(binaryChildNode, "ID"));
+					final String idString = Utilities.getAttributeValue(binaryChildNode, "ID");
+					final int id;
+					try {
+						id = Integer.parseInt(idString);
+					} catch (final NumberFormatException e) {
+						throw new Exception("Invalid binary id: " + idString, e);
+					}
 					final boolean compressed = "True".equals(Utilities.getAttributeValue(binaryChildNode, "Compressed"));
-					final String dataBase64String = parseStringValue(binaryChildNode);
-					final byte[] data = Base64.getDecoder().decode(dataBase64String);
+					final byte[] data = decodeBinaryValue(binaryChildNode);
 					binaryItems.add(new KdbxBinary().withId(id).withCompressed(compressed).withData(data));
 				} else {
 					if (strictMode) {
@@ -529,6 +657,13 @@ public class KdbxReader implements AutoCloseable {
 		return binaryItems;
 	}
 
+	/**
+	 * Reads the "CustomIcons" node.
+	 *
+	 * @param customIconsNode the "CustomIcons" node
+	 * @return the icon data by icon UUID
+	 * @throws Exception if the data is invalid or unknown in strict mode
+	 */
 	private Map<KdbxUUID, byte[]> parseCustomIcons(final Node customIconsNode) throws Exception {
 		final Map<KdbxUUID, byte[]> customIcons = new LinkedHashMap<>();
 		final NodeList customIconsChildNodes = customIconsNode.getChildNodes();
@@ -550,6 +685,14 @@ public class KdbxReader implements AutoCloseable {
 		return customIcons;
 	}
 
+	/**
+	 * Reads the "Root" node with groups, entries and deleted objects.
+	 *
+	 * @param dataFormatVersion data format version of the file
+	 * @param database database to fill
+	 * @param rootNode the "Root" node
+	 * @throws Exception if the data is invalid or unknown in strict mode
+	 */
 	private void readRoot(final Version dataFormatVersion, final KdbxDatabase database, final Node rootNode)
 			throws Exception {
 		final NodeList childNodes = rootNode.getChildNodes();
@@ -571,6 +714,14 @@ public class KdbxReader implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Reads the "DeletedObjects" node.
+	 *
+	 * @param dataFormatVersion data format version of the file
+	 * @param database database to fill
+	 * @param childNode the "DeletedObjects" node
+	 * @throws Exception if the data is invalid or unknown in strict mode
+	 */
 	private void readDeletedObjects(final Version dataFormatVersion, final KdbxDatabase database, final Node childNode)
 			throws Exception {
 		final NodeList deletedObjectsChildNodes = childNode.getChildNodes();
@@ -611,6 +762,14 @@ public class KdbxReader implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Reads a "Group" node including its subgroups and entries.
+	 *
+	 * @param dataFormatVersion data format version of the file
+	 * @param groupNode the "Group" node
+	 * @return the group
+	 * @throws Exception if the data is invalid or unknown in strict mode
+	 */
 	private KdbxGroup readGroup(final Version dataFormatVersion, final Node groupNode) throws Exception {
 		final KdbxGroup group = new KdbxGroup();
 		final NodeList childNodes = groupNode.getChildNodes();
@@ -630,9 +789,9 @@ public class KdbxReader implements AutoCloseable {
 				} else if ("DefaultAutoTypeSequence".equals(childNode.getNodeName())) {
 					group.setDefaultAutoTypeSequence(parseStringValue(childNode));
 				} else if ("EnableAutoType".equals(childNode.getNodeName())) {
-					group.setEnableAutoType(parseBooleanValue(childNode));
+					group.setEnableAutoTypeSetting(parseNullableBooleanValue(childNode));
 				} else if ("EnableSearching".equals(childNode.getNodeName())) {
-					group.setEnableSearching(parseBooleanValue(childNode));
+					group.setEnableSearchingSetting(parseNullableBooleanValue(childNode));
 				} else if ("LastTopVisibleEntry".equals(childNode.getNodeName())) {
 					group.setLastTopVisibleEntry(parseUuidValue(childNode));
 				} else if ("Times".equals(childNode.getNodeName())) {
@@ -655,6 +814,14 @@ public class KdbxReader implements AutoCloseable {
 		return group;
 	}
 
+	/**
+	 * Reads a "Times" node.
+	 *
+	 * @param dataFormatVersion data format version of the file
+	 * @param timesNode the "Times" node
+	 * @return the times
+	 * @throws Exception if the data is invalid or unknown in strict mode
+	 */
 	private KdbxTimes readKdbxTimes(final Version dataFormatVersion, final Node timesNode) throws Exception {
 		final KdbxTimes times = new KdbxTimes();
 		final NodeList childNodes = timesNode.getChildNodes();
@@ -685,6 +852,14 @@ public class KdbxReader implements AutoCloseable {
 		return times;
 	}
 
+	/**
+	 * Reads an "Entry" node including its history entries.
+	 *
+	 * @param dataFormatVersion data format version of the file
+	 * @param entryNode the "Entry" node
+	 * @return the entry
+	 * @throws Exception if the data is invalid or unknown in strict mode
+	 */
 	private KdbxEntry readEntry(final Version dataFormatVersion, final Node entryNode) throws Exception {
 		final KdbxEntry entry = new KdbxEntry();
 		final NodeList childNodes = entryNode.getChildNodes();
@@ -706,7 +881,7 @@ public class KdbxReader implements AutoCloseable {
 				} else if ("Times".equals(childNode.getNodeName())) {
 					entry.setTimes(readKdbxTimes(dataFormatVersion, childNode));
 				} else if ("String".equals(childNode.getNodeName())) {
-					parseKeyValue(entry.getItems(), childNode);
+					parseKeyValue(entry, childNode);
 				} else if ("Binary".equals(childNode.getNodeName())) {
 					entry.getBinaries().add(readEntryBinary(childNode));
 				} else if ("AutoType".equals(childNode.getNodeName())) {
@@ -731,9 +906,9 @@ public class KdbxReader implements AutoCloseable {
 									final Node associationChildNode = associationChildNodes.item(k);
 									if (associationChildNode.getNodeType() != Node.TEXT_NODE) {
 										if ("Window".equals(associationChildNode.getNodeName())) {
-											window = parseStringValue(autoTypeChildNode);
+											window = parseStringValue(associationChildNode);
 										} else if ("KeystrokeSequence".equals(associationChildNode.getNodeName())) {
-											keystrokeSequence = parseStringValue(autoTypeChildNode);
+											keystrokeSequence = parseStringValue(associationChildNode);
 										} else {
 											if (strictMode) {
 												throw new Exception("Unexpected association data node name: "
@@ -779,19 +954,33 @@ public class KdbxReader implements AutoCloseable {
 		return entry;
 	}
 
+	/**
+	 * Returns the text content of a node.
+	 *
+	 * @param stringValueNode element or text node
+	 * @return the text or null for an element without content
+	 */
 	private static String parseStringValue(final Node stringValueNode) {
-		if (stringValueNode.getNodeValue() != null) {
-			return stringValueNode.getNodeValue();
-		} else if (stringValueNode.getFirstChild() != null) {
-			return parseStringValue(stringValueNode.getFirstChild());
+		if (stringValueNode.getNodeType() == Node.ELEMENT_NODE) {
+			// getTextContent also joins text split into several nodes (e.g. by CDATA sections)
+			return stringValueNode.hasChildNodes() ? stringValueNode.getTextContent() : null;
 		} else {
-			return null;
+			return stringValueNode.getNodeValue();
 		}
 	}
 
-	private void parseKeyValue(final Map<String, Object> items, final Node keyValueNode) throws Exception {
+	/**
+	 * Reads a "String" node of an entry and stores its key, value and protection flag in the entry.
+	 * Protected values are decrypted with the inner stream cipher.
+	 *
+	 * @param entry entry to store the item in
+	 * @param keyValueNode the "String" node
+	 * @throws Exception if the data is invalid or unknown in strict mode
+	 */
+	private void parseKeyValue(final KdbxEntry entry, final Node keyValueNode) throws Exception {
 		String key = null;
 		String value = null;
+		boolean protectedItemKey = false;
 		final NodeList childNodes = keyValueNode.getChildNodes();
 		for (int i = 0; i < childNodes.getLength(); i++) {
 			final Node childNode = childNodes.item(i);
@@ -811,11 +1000,11 @@ public class KdbxReader implements AutoCloseable {
 							}
 						}
 					}
+					if (isProtected) {
+						protectedItemKey = true;
+					}
 					if (isProtected && value != null && innerEncryptionCipher != null) {
-						final byte[] decrypedData = Base64.getDecoder().decode(value);
-						final byte[] output = new byte[decrypedData.length];
-						innerEncryptionCipher.processBytes(decrypedData, 0, decrypedData.length, output, 0);
-						value = new String(output, StandardCharsets.UTF_8);
+						value = new String(decryptProtectedData(Base64.getDecoder().decode(value)), StandardCharsets.UTF_8);
 					}
 				} else {
 					if (strictMode) {
@@ -827,10 +1016,20 @@ public class KdbxReader implements AutoCloseable {
 		if (key == null) {
 			throw new Exception("Invalid key value data node: Missing key");
 		} else {
-			items.put(key, value);
+			entry.setItem(key, value);
+			if (protectedItemKey) {
+				entry.setItemProtected(key, true);
+			}
 		}
 	}
 
+	/**
+	 * Reads a "Binary" node of an entry, which either references a binary of the database or contains the data itself.
+	 *
+	 * @param entryBinaryNode the "Binary" node
+	 * @return the entry binary
+	 * @throws Exception if the data is invalid or unknown in strict mode
+	 */
 	private KdbxEntryBinary readEntryBinary(final Node entryBinaryNode) throws Exception {
 		String key = null;
 		Integer refID = null;
@@ -844,9 +1043,16 @@ public class KdbxReader implements AutoCloseable {
 				} else if ("Value".equals(entryBinaryChildNode.getNodeName())) {
 					final String refIdString = Utilities.getAttributeValue(entryBinaryChildNode, "Ref");
 					if (Utilities.isNotBlank(refIdString)) {
-						refID = Integer.parseInt(refIdString);
+						try {
+							refID = Integer.parseInt(refIdString.trim());
+						} catch (final NumberFormatException e) {
+							throw new Exception("Invalid binary reference id: " + refIdString, e);
+						}
 					} else {
-						data = Base64.getDecoder().decode(parseStringValue(entryBinaryChildNode));
+						data = decodeBinaryValue(entryBinaryChildNode);
+						if ("True".equals(Utilities.getAttributeValue(entryBinaryChildNode, "Compressed"))) {
+							data = Utilities.gunzip(data);
+						}
 					}
 				} else {
 					if (strictMode) {
@@ -873,6 +1079,77 @@ public class KdbxReader implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Decodes the base64 data of a binary value node and decrypts it, if it is marked as protected.
+	 * The compression flag is not evaluated here.
+	 *
+	 * @param binaryValueNode node with base64 data and optional "Protected" attribute
+	 * @return the decoded (and decrypted) data
+	 * @throws Exception if the data is no valid base64
+	 */
+	private byte[] decodeBinaryValue(final Node binaryValueNode) throws Exception {
+		final String dataBase64String = parseStringValue(binaryValueNode);
+		final byte[] data = dataBase64String == null ? new byte[0] : Base64.getMimeDecoder().decode(dataBase64String);
+		if ("True".equals(Utilities.getAttributeValue(binaryValueNode, "Protected")) && innerEncryptionCipher != null) {
+			return decryptProtectedData(data);
+		} else {
+			return data;
+		}
+	}
+
+	/**
+	 * Decrypts protected data with the inner stream cipher.
+	 * The inner stream cipher must be applied to all protected values in the order of their appearance in the XML document.
+	 *
+	 * @param encryptedData the encrypted data
+	 * @return the decrypted data
+	 */
+	private byte[] decryptProtectedData(final byte[] encryptedData) {
+		final byte[] output = new byte[encryptedData.length];
+		innerEncryptionCipher.processBytes(encryptedData, 0, encryptedData.length, output, 0);
+		return output;
+	}
+
+	/**
+	 * Resolves the references of entry attachments (including attachments of history entries) to the binary attachments of the database.
+	 * References use the binary id, which in KDBX 4 is the position in the inner header.
+	 *
+	 * @param database the database
+	 * @throws Exception if a referenced binary does not exist or cannot be compressed
+	 */
+	private static void resolveBinaryReferences(final KdbxDatabase database) throws Exception {
+		for (final KdbxEntry entry : database.getAllEntriesIncludingHistory()) {
+			for (final KdbxEntryBinary binary : entry.getBinaries()) {
+				if (binary.getRefId() != null) {
+					KdbxBinary databaseBinary = null;
+					if (database.getBinaryAttachments() != null) {
+						for (final KdbxBinary binaryAttachment : database.getBinaryAttachments()) {
+							if (binaryAttachment.getId() == binary.getRefId()) {
+								databaseBinary = binaryAttachment;
+								break;
+							}
+						}
+					}
+					if (databaseBinary == null) {
+						throw new Exception("Cannot find referenced binary id: " + binary.getRefId());
+					} else if (databaseBinary.isCompressed()) {
+						binary.setCompressedData(databaseBinary.getData());
+					} else {
+						binary.setCompressedData(Utilities.gzip(databaseBinary.getData()));
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Parses a date time value: ISO text in KDBX 3.x, base64 encoded seconds since 0001-01-01 in KDBX 4.x.
+	 *
+	 * @param kdbxVersion data format version of the file
+	 * @param node node with the value
+	 * @return the date time or null for an empty value
+	 * @throws Exception if the value is invalid
+	 */
 	private static ZonedDateTime parseDateTimeValue(final Version kdbxVersion, final Node node) throws Exception {
 		final String stringValue = parseStringValue(node);
 		if (stringValue == null || "".equals(stringValue.trim())) {
@@ -894,10 +1171,39 @@ public class KdbxReader implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Parses a boolean value ("True" or "False").
+	 *
+	 * @param node node with the value
+	 * @return true for "True" (case insensitive), otherwise false
+	 */
 	private static boolean parseBooleanValue(final Node node) {
-		return "True".equals(parseStringValue(node));
+		final String stringValue = parseStringValue(node);
+		return stringValue != null && "True".equalsIgnoreCase(stringValue.trim());
 	}
 
+	/**
+	 * Parses a boolean value, which may also have the value "null" (e.g. "inherit from parent group").
+	 *
+	 * @param node node with the value
+	 * @return true, false or null for "null" or an empty value
+	 */
+	private static Boolean parseNullableBooleanValue(final Node node) {
+		final String stringValue = parseStringValue(node);
+		if (stringValue == null || Utilities.isBlank(stringValue) || "null".equalsIgnoreCase(stringValue.trim())) {
+			return null;
+		} else {
+			return "True".equalsIgnoreCase(stringValue.trim());
+		}
+	}
+
+	/**
+	 * Parses an integer value.
+	 *
+	 * @param node node with the value
+	 * @return the integer value
+	 * @throws Exception if the value is no valid integer
+	 */
 	private static int parseIntegerValue(final Node node) throws Exception {
 		final String stringValue = parseStringValue(node);
 		if (stringValue == null || "".equals(stringValue.trim())) {
@@ -911,12 +1217,23 @@ public class KdbxReader implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Parses a base64 encoded UUID value.
+	 *
+	 * @param node node with the value
+	 * @return the UUID or null for an empty value
+	 */
 	private static KdbxUUID parseUuidValue(final Node node) {
 		return KdbxUUID.fromBase64(parseStringValue(node));
 	}
 
+	/**
+	 * Closes the input stream.
+	 *
+	 * @throws IOException if closing the stream fails
+	 */
 	@Override
-	public void close() throws Exception {
+	public void close() throws IOException {
 		if (inputStream != null) {
 			inputStream.close();
 		}
