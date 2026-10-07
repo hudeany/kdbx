@@ -3,7 +3,7 @@
 	<!-- ===== Project specific part ===== -->
 
 	<!-- Artifact name used for the jar file names and the Maven artifactId -->
-	<property name="artifactId" value="kdbxreader" />
+	<property name="artifactId" value="kdbx" />
 
 	<!-- Bouncy Castle version -->
 	<property name="bouncycastle.version" value="1.86" />
