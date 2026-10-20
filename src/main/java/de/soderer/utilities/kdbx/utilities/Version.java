@@ -1,20 +1,31 @@
 package de.soderer.utilities.kdbx.utilities;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
- * Version number with major, minor and micro part, e.g. the KDBX data format version.
+ * Version number consisting of major, minor and micro number, like "1.2.3".
+ * Versions are ordered numerically by major, then minor, then micro number (so "19.0.10" is newer than "19.0.9").
  */
 public class Version implements Comparable<Version> {
+
+	/** Pattern of a full version string */
+	private static final Pattern VERSIONPATTERN = Pattern.compile("^(\\d+)\\.(\\d+)\\.(\\d+)$");
+
+	/** Pattern to find a version within a text */
+	private static final Pattern VERSION_IN_TEXT_PATTERN = Pattern.compile("\\d+\\.\\d+\\.\\d+");
+
 	/** The major version number. */
-	private int majorVersionNumber;
+	private final int majorVersionNumber;
 
 	/** The minor version number. */
-	private int minorVersionNumber;
+	private final int minorVersionNumber;
 
 	/** The micro version number. */
-	private int microVersionNumber;
+	private final int microVersionNumber;
 
 	/**
-	 * The Constructor.
+	 * Create a version from its parts.
 	 *
 	 * @param majorVersionNumber
 	 *            the major version number
@@ -27,6 +38,25 @@ public class Version implements Comparable<Version> {
 		this.majorVersionNumber = majorVersionNumber;
 		this.minorVersionNumber = minorVersionNumber;
 		this.microVersionNumber = microVersionNumber;
+	}
+
+	/**
+	 * Parse a version string like "1.2.3".
+	 *
+	 * @param versionString
+	 *            version string with exactly three numeric parts separated by dots
+	 * @throws Exception
+	 *             if the string is null or not a valid version string, or a part exceeds the int range
+	 */
+	public Version(final String versionString) throws Exception {
+		final Matcher matcher = versionString == null ? null : VERSIONPATTERN.matcher(versionString);
+		if (matcher != null && matcher.find()) {
+			majorVersionNumber = Integer.parseInt(matcher.group(1));
+			minorVersionNumber = Integer.parseInt(matcher.group(2));
+			microVersionNumber = Integer.parseInt(matcher.group(3));
+		} else {
+			throw new Exception("Invalid version number");
+		}
 	}
 
 	/**
@@ -56,10 +86,8 @@ public class Version implements Comparable<Version> {
 		return microVersionNumber;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 *
-	 * @see java.lang.Object#toString()
+	/**
+	 * Version string like "1.2.3".
 	 */
 	@Override
 	public String toString() {
@@ -67,10 +95,32 @@ public class Version implements Comparable<Version> {
 	}
 
 	/**
-	 * Compares the version numbers.
+	 * Gets the first full version (three numeric parts) found in a text.
 	 *
-	 * @param otherVersion the other version or null
-	 * @return 1 if this version is greater (or the other version is null), 0 for equal versions, -1 if this version is lower
+	 * @param data
+	 *            text to search, may be null
+	 * @return the first version found in the text, or null if there is none
+	 */
+	public static Version getFirstFullVersionNumberFromText(final String data) {
+		if (Utilities.isBlank(data)) {
+			return null;
+		} else {
+			final Matcher matcher = VERSION_IN_TEXT_PATTERN.matcher(data);
+			while (matcher.find()) {
+				try {
+					return new Version(matcher.group());
+				} catch (@SuppressWarnings("unused") final Exception e) {
+					// A part exceeds the int range (e.g. a build timestamp), so a later version in the text may still be valid
+				}
+			}
+			return null;
+		}
+	}
+
+	/**
+	 * Compare this version to another version. A null version is treated as older than any version.
+	 *
+	 * @return +1 if this version is newer than otherVersion, 0 if both are equal, -1 if this version is older
 	 */
 	@Override
 	public int compareTo(final Version otherVersion) {
@@ -95,6 +145,9 @@ public class Version implements Comparable<Version> {
 		}
 	}
 
+	/**
+	 * Two versions are equal if all three version numbers are equal (consistent with {@link #compareTo(Version)}).
+	 */
 	@Override
 	public boolean equals(final Object other) {
 		if (this == other) {
@@ -102,12 +155,15 @@ public class Version implements Comparable<Version> {
 		} else if (!(other instanceof Version)) {
 			return false;
 		} else {
-			return compareTo((Version) other) == 0;
+			final Version otherVersion = (Version) other;
+			return majorVersionNumber == otherVersion.majorVersionNumber
+					&& minorVersionNumber == otherVersion.minorVersionNumber
+					&& microVersionNumber == otherVersion.microVersionNumber;
 		}
 	}
 
 	@Override
 	public int hashCode() {
-		return java.util.Objects.hash(majorVersionNumber, minorVersionNumber, microVersionNumber);
+		return (majorVersionNumber * 31 + minorVersionNumber) * 31 + microVersionNumber;
 	}
 }
