@@ -276,46 +276,6 @@ public class KdbxConstants {
 	}
 
 	/**
-	 * Former interpretation of the first value of KDBX 3.x payload blocks.
-	 *
-	 * @deprecated The first value of a KDBX 3.x payload block is the consecutive block index, not a block type. The end of the payload is marked by a block with data length 0.
-	 */
-	@Deprecated
-	public enum PayloadBlockType {
-		/**
-		 * Value 0, which is the index of the first block.
-		 */
-		PAYLOAD(0x00),
-		/**
-		 * Value 1, which is the index of the second block, not the end of the payload.
-		 */
-		END_OF_PAYLOAD(0x01);
-
-		/**
-		 * Value in the payload block.
-		 */
-		private final int id;
-
-		/**
-		 * Creates the constant.
-		 *
-		 * @param id value in the payload block
-		 */
-		PayloadBlockType(final int id) {
-			this.id = id;
-		}
-
-		/**
-		 * Returns the value in the payload block.
-		 *
-		 * @return the value
-		 */
-		public int getId() {
-			return id;
-		}
-	}
-
-	/**
 	 * Standard icons of KeePass, identified by their icon id.
 	 */
 	public enum KdbxStandardIcon {
