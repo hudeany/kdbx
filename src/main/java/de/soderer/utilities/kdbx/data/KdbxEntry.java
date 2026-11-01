@@ -17,6 +17,70 @@ import java.util.Set;
  */
 public class KdbxEntry {
 	/**
+	 * Standard items of a KeePass entry and their keys in the item map.
+	 */
+	public enum KdbxStandardItem {
+		/** Title of the entry. */
+		TITLE("Title"),
+		/** User name of the entry. */
+		USERNAME("UserName"),
+		/** Password of the entry. */
+		PASSWORD("Password"),
+		/** URL of the entry. */
+		URL("URL"),
+		/** Notes of the entry. */
+		NOTES("Notes");
+
+		/**
+		 * Key of this item in the item map.
+		 */
+		private final String key;
+
+		/**
+		 * Creates a standard item.
+		 *
+		 * @param key key of this item in the item map
+		 */
+		KdbxStandardItem(final String key) {
+			this.key = key;
+		}
+
+		/**
+		 * Returns the key of this item in the item map.
+		 *
+		 * @return the key of this item in the item map
+		 */
+		public String getKey() {
+			return key;
+		}
+
+		/**
+		 * Returns the standard item for a key.
+		 *
+		 * @param key key of the item (case-sensitive)
+		 * @return the standard item or null, if the key is not a standard item key
+		 */
+		public static KdbxStandardItem getByKey(final String key) {
+			for (final KdbxStandardItem item : values()) {
+				if (item.key.equals(key)) {
+					return item;
+				}
+			}
+			return null;
+		}
+
+		/**
+		 * Returns whether a key is the key of a standard item.
+		 *
+		 * @param key key of the item (case-sensitive)
+		 * @return true if the key is the key of a standard item
+		 */
+		public static boolean isStandardItemKey(final String key) {
+			return getByKey(key) != null;
+		}
+	}
+
+	/**
 	 * UUID of this entry.
 	 */
 	private KdbxUUID uuid;
@@ -134,7 +198,7 @@ public class KdbxEntry {
 	 * @param title the title of this entry (item "Title")
 	 */
 	public void setTitle(final String title) {
-		items.put("Title", title);
+		items.put(KdbxStandardItem.TITLE.getKey(), title);
 	}
 
 	/**
@@ -154,7 +218,7 @@ public class KdbxEntry {
 	 * @return the title of this entry (item "Title")
 	 */
 	public String getTitle() {
-		return (String) items.get("Title");
+		return (String) items.get(KdbxStandardItem.TITLE.getKey());
 	}
 
 	/**
@@ -163,7 +227,7 @@ public class KdbxEntry {
 	 * @param username the user name of this entry (item "UserName")
 	 */
 	public void setUsername(final String username) {
-		items.put("UserName", username);
+		items.put(KdbxStandardItem.USERNAME.getKey(), username);
 	}
 
 	/**
@@ -183,7 +247,7 @@ public class KdbxEntry {
 	 * @return the user name of this entry (item "UserName")
 	 */
 	public String getUsername() {
-		return (String) items.get("UserName");
+		return (String) items.get(KdbxStandardItem.USERNAME.getKey());
 	}
 
 	/**
@@ -192,7 +256,7 @@ public class KdbxEntry {
 	 * @param password the password of this entry (item "Password")
 	 */
 	public void setPassword(final String password) {
-		items.put("Password", password);
+		items.put(KdbxStandardItem.PASSWORD.getKey(), password);
 	}
 
 	/**
@@ -212,7 +276,7 @@ public class KdbxEntry {
 	 * @return the password of this entry (item "Password")
 	 */
 	public String getPassword() {
-		return (String) items.get("Password");
+		return (String) items.get(KdbxStandardItem.PASSWORD.getKey());
 	}
 
 	/**
@@ -221,7 +285,7 @@ public class KdbxEntry {
 	 * @param url the URL of this entry (item "URL")
 	 */
 	public void setUrl(final String url) {
-		items.put("URL", url);
+		items.put(KdbxStandardItem.URL.getKey(), url);
 	}
 
 	/**
@@ -241,7 +305,7 @@ public class KdbxEntry {
 	 * @return the URL of this entry (item "URL")
 	 */
 	public String getUrl() {
-		return (String) items.get("URL");
+		return (String) items.get(KdbxStandardItem.URL.getKey());
 	}
 
 	/**
@@ -250,7 +314,7 @@ public class KdbxEntry {
 	 * @param notes the notes of this entry (item "Notes")
 	 */
 	public void setNotes(final String notes) {
-		items.put("Notes", notes);
+		items.put(KdbxStandardItem.NOTES.getKey(), notes);
 	}
 
 	/**
@@ -270,7 +334,7 @@ public class KdbxEntry {
 	 * @return the notes of this entry (item "Notes")
 	 */
 	public String getNotes() {
-		return (String) items.get("Notes");
+		return (String) items.get(KdbxStandardItem.NOTES.getKey());
 	}
 
 	/**
@@ -728,7 +792,7 @@ public class KdbxEntry {
 		} else if (getClass() != obj.getClass()) {
 			return false;
 		} else {
-			KdbxEntry other = (KdbxEntry) obj;
+			final KdbxEntry other = (KdbxEntry) obj;
 			return Objects.equals(autoTypeAssociationKeystrokeSequence, other.autoTypeAssociationKeystrokeSequence)
 					&& Objects.equals(autoTypeAssociationWindow, other.autoTypeAssociationWindow)
 					&& Objects.equals(autoTypeDataTransferObfuscation, other.autoTypeDataTransferObfuscation)
@@ -754,7 +818,7 @@ public class KdbxEntry {
 	public String toString() {
 		return toString(false);
 	}
-	
+
 	/**
 	 * Returns a text representation of the main data of this entry.
 	 *
@@ -763,103 +827,102 @@ public class KdbxEntry {
 	 */
 	public String toString(final boolean showPassword) {
 		String returnString = "UUID: " + uuid + "\n";
-		
-		if (items.get("Title") != null) {
-			returnString += "Title: " + items.get("Title") + "\n";
+
+		if (items.get(KdbxStandardItem.TITLE.getKey()) != null) {
+			returnString += "Title: " + items.get(KdbxStandardItem.TITLE.getKey()) + "\n";
 		}
-		
-		if (items.get("UserName") != null) {
-			returnString += "Username: " + items.get("UserName") + "\n";
+
+		if (items.get(KdbxStandardItem.USERNAME.getKey()) != null) {
+			returnString += "Username: " + items.get(KdbxStandardItem.USERNAME.getKey()) + "\n";
 		}
-		
-		if (items.get("Password") != null) {
+
+		if (items.get(KdbxStandardItem.PASSWORD.getKey()) != null) {
 			if (showPassword) {
-				returnString += "Password: " + items.get("Password") + "\n";
+				returnString += "Password: " + items.get(KdbxStandardItem.PASSWORD.getKey()) + "\n";
 			} else {
 				returnString += "Password: ***\n";
 			}
 		}
-		
-		if (items.get("URL") != null) {
-			returnString += "URL: " + items.get("URL") + "\n";
+
+		if (items.get(KdbxStandardItem.URL.getKey()) != null) {
+			returnString += "URL: " + items.get(KdbxStandardItem.URL.getKey()) + "\n";
 		}
-		
-		if (items.get("Notes") != null) {
-			returnString += "Notes: " + items.get("Notes") + "\n";
+
+		if (items.get(KdbxStandardItem.NOTES.getKey()) != null) {
+			returnString += "Notes: " + items.get(KdbxStandardItem.NOTES.getKey()) + "\n";
 		}
-		
+
 		if (times.getCreationTime() != null) {
 			returnString += "Created: " + times.getCreationTime() + "\n";
 		}
-		
+
 		if (times.getLastModificationTime() != null) {
 			returnString += "Changed: " + times.getLastModificationTime() + "\n";
 		}
-		
-		for (Entry<String, Object> itemEntry : items.entrySet()) {
-			if (!"Title".equals(itemEntry.getKey()) && !"UserName".equals(itemEntry.getKey()) && !"Password".equals(itemEntry.getKey())
-					&& !"URL".equals(itemEntry.getKey()) && !"Notes".equals(itemEntry.getKey())) {
+
+		for (final Entry<String, Object> itemEntry : items.entrySet()) {
+			if (!KdbxStandardItem.isStandardItemKey(itemEntry.getKey())) {
 				returnString += itemEntry.getKey() + ": " + itemEntry.getValue() + "\n";
 			}
 		}
-		
+
 		if (iconID != null && iconID > 0) {
 			returnString += "IconID: " + iconID + "\n";
 		}
-		
+
 		if (customIconUuid != null) {
 			returnString += "CustomIconUuid: " + customIconUuid + "\n";
 		}
-		
+
 		if (foregroundColor != null) {
 			returnString += "ForegroundColor: " + foregroundColor + "\n";
 		}
-		
+
 		if (backgroundColor != null) {
 			returnString += "BackgroundColor: " + backgroundColor + "\n";
 		}
-		
+
 		if (overrideURL != null) {
 			returnString += "OverrideURL: " + overrideURL + "\n";
 		}
-		
+
 		if (tags != null) {
 			returnString += "Tags: " + tags + "\n";
 		}
-		
-		
+
+
 		if (autoTypeEnabled) {
 			returnString += "AutoTypeEnabled: " + autoTypeEnabled + "\n";
 		}
-		
+
 		if (autoTypeDataTransferObfuscation != null) {
 			returnString += "AutoTypeDataTransferObfuscation: " + autoTypeDataTransferObfuscation + "\n";
 		}
-		
+
 		if (autoTypeDefaultSequence != null) {
 			returnString += "AutoTypeDefaultSequence: " + autoTypeDefaultSequence + "\n";
 		}
-		
+
 		if (autoTypeAssociationWindow != null) {
 			returnString += "AutoTypeAssociationWindow: " + autoTypeAssociationWindow + "\n";
 		}
-		
+
 		if (autoTypeAssociationKeystrokeSequence != null) {
 			returnString += "AutoTypeAssociationKeystrokeSequence: " + autoTypeAssociationKeystrokeSequence + "\n";
 		}
-		
+
 		if (customData != null && customData.size() > 0) {
 			returnString += "CustomData size: " + customData.size() + "\n";
 		}
-		
+
 		if (history != null && history.size() > 0) {
 			returnString += "History size: " + history.size() + "\n";
 		}
-		
+
 		if (binaries != null && binaries.size() > 0) {
 			returnString += "Binaries size: " + binaries.size() + "\n";
 		}
-		
+
 		return returnString;
 	}
 }
