@@ -143,8 +143,25 @@ public class KdbxCredentialsTest {
 	}
 
 	@Test
-	public void testWindowsUserAccountIsNotSupported() {
-		assertThrows(RuntimeException.class, () -> new KdbxCredentials("DOMAIN\\User").createCompositeKeyHash());
-		assertThrows(RuntimeException.class, () -> new KdbxCredentials(PASSWORD, KEY, "DOMAIN\\User").createCompositeKeyHash());
+	public void testWindowsUserAccountKey() throws Exception {
+		final byte[] userKey = new byte[64];
+		for (int i = 0; i < userKey.length; i++) {
+			userKey[i] = (byte) (255 - i);
+		}
+
+		// KeePass: SHA-256( SHA-256(password) || keyFileKey || SHA-256(userKey) )
+		final byte[] expectedAll = sha256(Utilities.concatArrays(Utilities.concatArrays(sha256(new String(PASSWORD).getBytes(StandardCharsets.UTF_8)), KEY), sha256(userKey)));
+		assertArrayEquals(expectedAll, new KdbxCredentials(PASSWORD, KEY, userKey).createCompositeKeyHash());
+		assertArrayEquals(expectedAll, new KdbxCredentials(PASSWORD, KEY).withWindowsUserAccountKey(userKey).createCompositeKeyHash());
+
+		final byte[] expectedUserKeyOnly = sha256(sha256(userKey));
+		assertArrayEquals(expectedUserKeyOnly, new KdbxCredentials(null, null, userKey).createCompositeKeyHash());
+	}
+
+	@Test
+	public void testWindowsUserAccountNotAvailableOnOtherOs() {
+		if (!System.getProperty("os.name", "").toLowerCase().startsWith("windows")) {
+			assertThrows(Exception.class, () -> new KdbxCredentials(PASSWORD).withCurrentWindowsUserAccount());
+		}
 	}
 }

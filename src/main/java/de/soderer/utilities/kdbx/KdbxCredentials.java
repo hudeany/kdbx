@@ -33,9 +33,11 @@ public class KdbxCredentials {
 	 */
 	private byte[] keyFileData = null;
 	/**
-	 * Windows user account or null (not supported yet).
+	 * Unprotected Windows user account key (content of KeePass' "ProtectedUserKey.bin" after DPAPI decryption) or null.
+	 *
+	 * @see WindowsUserAccountKey
 	 */
-	private String windowsUserAccount = null;
+	private byte[] windowsUserAccountKey = null;
 
 	/**
 	 * Creates credentials with a master password only.
@@ -56,15 +58,6 @@ public class KdbxCredentials {
 	}
 
 	/**
-	 * Creates credentials with a Windows user account only (not supported yet).
-	 *
-	 * @param windowsUserAccount the Windows user account
-	 */
-	public KdbxCredentials(final String windowsUserAccount) {
-		this.windowsUserAccount = windowsUserAccount;
-	}
-
-	/**
 	 * Creates credentials with master password and key file.
 	 *
 	 * @param password the master password or null
@@ -76,23 +69,51 @@ public class KdbxCredentials {
 	}
 
 	/**
-	 * Creates credentials with master password, key file and Windows user account.
+	 * Creates credentials with master password, key file and Windows user account key.
+	 * <p>
+	 * The Windows user account key is the DPAPI-decrypted content of KeePass' "ProtectedUserKey.bin".
+	 * Use {@link WindowsUserAccountKey#load()} to read it for the currently logged on Windows user.
 	 *
 	 * @param password the master password or null
 	 * @param keyFileData content of the key file or null
-	 * @param windowsUserAccount the Windows user account or null (not supported yet)
+	 * @param windowsUserAccountKey the unprotected Windows user account key or null
 	 */
-	public KdbxCredentials(final char[] password, final byte[] keyFileData, final String windowsUserAccount) {
+	public KdbxCredentials(final char[] password, final byte[] keyFileData, final byte[] windowsUserAccountKey) {
 		this.password = password;
 		this.keyFileData = keyFileData;
-		this.windowsUserAccount = windowsUserAccount;
+		this.windowsUserAccountKey = windowsUserAccountKey;
 	}
 
 	/**
-	 * Creates the composite key hash: SHA-256 over the concatenated SHA-256 hash of the password and the key file key.
+	 * Adds the key of the currently logged on Windows user account (like KeePass' option "Windows user account").
+	 * The key is read from "%APPDATA%\KeePass\ProtectedUserKey.bin" and decrypted via Windows DPAPI.
+	 * Works on Windows only.
+	 *
+	 * @return this credentials object for chaining
+	 * @throws Exception if the key cannot be read or decrypted
+	 */
+	public KdbxCredentials withCurrentWindowsUserAccount() throws Exception {
+		windowsUserAccountKey = WindowsUserAccountKey.load();
+		return this;
+	}
+
+	/**
+	 * Sets the unprotected Windows user account key.
+	 *
+	 * @param newWindowsUserAccountKey the unprotected Windows user account key or null
+	 * @return this credentials object for chaining
+	 */
+	public KdbxCredentials withWindowsUserAccountKey(final byte[] newWindowsUserAccountKey) {
+		this.windowsUserAccountKey = newWindowsUserAccountKey;
+		return this;
+	}
+
+	/**
+	 * Creates the composite key hash: SHA-256 over the concatenation of SHA-256(password), the key file key
+	 * and SHA-256(Windows user account key), in this order (same as KeePass).
 	 *
 	 * @return the 32 bytes composite key hash
-	 * @throws Exception if the key file is invalid or a Windows user account is used
+	 * @throws Exception if the key file is invalid
 	 */
 	public byte[] createCompositeKeyHash() throws Exception {
 		final ByteArrayOutputStream concat = new ByteArrayOutputStream();
@@ -112,11 +133,11 @@ public class KdbxCredentials {
 			concat.write(keyFileKey, 0, keyFileKey.length);
 		}
 
-		if (windowsUserAccount != null) {
-			// TODO Implement windows user account credentials
-			// final byte[] windowsUserAccountHash = null;// = MessageDigest.getInstance("sha256").digest(windowsUserAccount);
-			// concat.write(windowsUserAccountHash, 0, windowsUserAccountHash.length);
-			throw new RuntimeException("WindowsUserAccount not supported yet");
+		if (windowsUserAccountKey != null) {
+			// KeePass (KcpUserAccount) uses the SHA-256 hash of the unprotected user key
+			final byte[] windowsUserAccountKeyHash = MessageDigest.getInstance("SHA-256").digest(windowsUserAccountKey);
+			concat.write(windowsUserAccountKeyHash, 0, windowsUserAccountKeyHash.length);
+			Arrays.fill(windowsUserAccountKeyHash, (byte) 0); // clear sensitive data
 		}
 
 		final byte[] compositeKeyBytes = concat.toByteArray();
